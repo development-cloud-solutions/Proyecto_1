@@ -83,3 +83,4 @@ Encolar **100 tareas de procesamiento de video** simultáneamente y esperar hast
 [JMeter/AB Client] --> [Nginx] --> [API (Gin)] --> [PostgreSQL + Redis]
                                      |
                                      --> [Worker Asynq] --> [ffmpeg processing]
+
