@@ -1,63 +1,84 @@
 #!/bin/bash
 
-# ==========================
-# ANB Rising Stars - AB Tests
-# ==========================
-# This script runs load tests using Apache Bench (ab)
-# against the public API endpoint and extracts key metrics.
-#
-# Metrics:
-#   - Throughput (Requests/min)
-#   - Response Time (Average in ms)
-#   - Utilization (CPU/Mem/I/O: must be monitored separately with docker stats or APM)
-#
-# Results are stored in ./capacity-planning/Apache_Bench/results/
-# and summarized in ./capacity-planning/Apache_Bench/summary.csv
+set -e
 
-URL="http://localhost:8080/api/public/videos"
-TOTAL_REQUESTS=500   # total requests per test
-RESULTS_DIR="./capacity-planning/Apache_Bench/results"
-SUMMARY_FILE="$RESULTS_DIR/summary.csv"
+# Obtener el directorio raíz del proyecto
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COLLECTIONS_DIR="$PROJECT_ROOT/collections"
 
-# Create results directory
-mkdir -p $RESULTS_DIR
+echo "🧪 Ejecutando tests de API con Newman..."
 
-# Write CSV header
-echo "Concurrency,Throughput(req/min),AvgResponseTime(ms)" > $SUMMARY_FILE
+# Verificar que Newman está instalado
+if ! command -v newman &> /dev/null; then
+    echo "📦 Instalando Newman..."
+    npm install -g newman
+fi
 
-echo "Starting load tests with Apache Bench"
-echo "Target endpoint: $URL"
-echo "Results will be saved in: $RESULTS_DIR"
-echo "Summary will be saved in: $SUMMARY_FILE"
-echo
+# Verificar que los archivos de colección y entorno existen
+if [ ! -f "$COLLECTIONS_DIR/anb.json" ]; then
+    echo "❌ Archivo de colección no encontrado: $COLLECTIONS_DIR/anb.json"
+    exit 1
+fi
 
-# Concurrency levels to test
-for c in 10 50 100 200 500
-do
-  echo "Running test with $c concurrent users..."
-  RESULT_FILE="$RESULTS_DIR/ab_c${c}.txt"
+if [ ! -f "$COLLECTIONS_DIR/postman_environment.json" ]; then
+    echo "❌ Archivo de entorno no encontrado: $COLLECTIONS_DIR/postman_environment.json"
+    exit 1
+fi
 
-  # Run ab and capture output
-  ab -n $TOTAL_REQUESTS -c $c $URL > "$RESULT_FILE"
+# Verificar que el archivo de video de prueba existe (necesario para la prueba de upload)
+TEST_VIDEO="$COLLECTIONS_DIR/test-video.mp4"
+if [ ! -f "$TEST_VIDEO" ]; then
+    echo "⚠️  Advertencia: Archivo de video de prueba no encontrado: $TEST_VIDEO"
+    echo "   La prueba de subida de video fallará sin este archivo."
+    echo "   Creando un archivo de prueba pequeño..."
+    # Crear un pequeño archivo de prueba (1MB)
+    dd if=/dev/zero of="$TEST_VIDEO" bs=1024 count=1024 2>/dev/null
+fi
 
-  # Extract throughput (req/sec) and convert to req/min
-  THROUGHPUT=$(grep "Requests per second" "$RESULT_FILE" | awk '{print $4}')
-  THROUGHPUT_MIN=$(echo "$THROUGHPUT * 60" | bc)
+# Esperar que la API esté disponible
+echo "⏳ Esperando que la API esté disponible..."
+MAX_ATTEMPTS=30
+ATTEMPT=1
 
-  # Extract mean response time (ms)
-  RESP_TIME=$(grep "Time per request:" "$RESULT_FILE" | head -n 1 | awk '{print $4}')
-
-  # Append to summary CSV
-  echo "$c,$THROUGHPUT_MIN,$RESP_TIME" >> $SUMMARY_FILE
-
-  echo "   Result saved to $RESULT_FILE"
-  echo "   Metrics -> Throughput: ${THROUGHPUT_MIN} req/min | Avg Response Time: ${RESP_TIME} ms"
+while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+    if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+        echo "✅ API está disponible"
+        break
+    fi
+    
+    if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+        echo "❌ API no está disponible después de $MAX_ATTEMPTS intentos"
+        echo "💡 Verifica que el servidor esté ejecutándose en localhost:8080"
+        exit 1
+    fi
+    
+    echo "⏳ Intento $ATTEMPT/$MAX_ATTEMPTS - Esperando API..."
+    sleep 2
+    ATTEMPT=$((ATTEMPT + 1))
 done
 
-echo
-echo "All tests completed."
-echo "Summary available at $SUMMARY_FILE"
-echo
-echo "Note: Resource Utilization (CPU, Memory, I/O) must be monitored in parallel using:"
-echo "docker stats"
-echo "or an external APM tool."
+# Crear directorio para resultados de tests si no existe
+RESULTS_DIR="$PROJECT_ROOT/test-results"
+mkdir -p "$RESULTS_DIR"
+
+# Ejecutar tests de Postman
+echo "🚀 Ejecutando colección de Postman..."
+newman run "$COLLECTIONS_DIR/anb.json" \
+    -e "$COLLECTIONS_DIR/postman_environment.json" \
+    --reporters cli,html,json \
+    --reporter-html-export "$RESULTS_DIR/test-report.html" \
+    --reporter-json-export "$RESULTS_DIR/test-results.json" \
+    --delay-request 1000
+
+# Verificar el resultado de los tests
+if [ $? -eq 0 ]; then
+    echo "✅ ¡Todos los tests pasaron exitosamente!"
+    echo "📊 Reporte HTML: $RESULTS_DIR/test-report.html"
+    echo "📊 Reporte JSON: $RESULTS_DIR/test-results.json"
+else
+    echo "❌ Algunos tests fallaron"
+    echo "📊 Reporte HTML: $RESULTS_DIR/test-report.html"
+    echo "📊 Reporte JSON: $RESULTS_DIR/test-results.json"
+    exit 1
+fi
