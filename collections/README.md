@@ -99,4 +99,4 @@
 
 ## Conclusión
 
-✅ **TODAS las pruebas pasaron exitosamente** - Todas las 13 aserciones en 6 requests se completaron sin errores. La API está funcionando correctamente en todas las áreas probadas: autenticación, gestión de videos y verificación de salud del sistema.
+- La API está funcionando correctamente en todas las áreas probadas: autenticación, gestión de videos y verificación de salud del sistema.
