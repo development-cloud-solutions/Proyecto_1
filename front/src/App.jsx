@@ -42,14 +42,16 @@ const UploadVideo = ({
   };
 
   const handleFileSelect = (file) => {
-    if (file && file.type.startsWith('video/')) {
+    const validation = validateVideoFile(file);
+    
+    if (validation.isValid) {
       setSelectedFile(file);
       setUploadError('');
       setProcessingStatus(null);
       setUploadProgress(0);
       setUploading(false);
     } else {
-      setUploadError('Por favor selecciona un archivo de video válido');
+      setUploadError(validation.errors.join('. '));
       setSelectedFile(null);
     }
   };
@@ -57,6 +59,13 @@ const UploadVideo = ({
   const handleUpload = async () => {
     if (!selectedFile || !videoTitle.trim()) {
       setUploadError('Por favor proporciona un título y selecciona un archivo de video');
+      return;
+    }
+
+    // Validate file again before upload
+    const validation = validateVideoFile(selectedFile);
+    if (!validation.isValid) {
+      setUploadError(validation.errors.join('. '));
       return;
     }
 
@@ -176,9 +185,15 @@ const UploadVideo = ({
                     <div>
                       <p className="text-green-700 font-semibold text-lg">Archivo seleccionado</p>
                       <p className="text-gray-600">{selectedFile.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
+                      <div className="text-sm space-y-1">
+                        <p className={`${selectedFile.size > VIDEO_VALIDATIONS.MAX_SIZE ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+                          Tamaño: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                          {selectedFile.size > VIDEO_VALIDATIONS.MAX_SIZE && ' (¡Demasiado grande!)'}
+                        </p>
+                        <p className="text-gray-500">
+                          Tipo: {selectedFile.type || 'Desconocido'}
+                        </p>
+                      </div>
                     </div>
                     <button
                       onClick={() => setSelectedFile(null)}
@@ -198,7 +213,7 @@ const UploadVideo = ({
                     </div>
                     <input
                       type="file"
-                      accept="video/*"
+                      accept=".mp4,.avi,.mov,video/mp4,video/avi,video/mov,video/quicktime"
                       onChange={(e) => e.target.files[0] && handleFileSelect(e.target.files[0])}
                       className="hidden"
                       id="file-upload"
@@ -321,14 +336,16 @@ const UploadVideoView = ({
   };
 
   const handleFileSelect = (file) => {
-    if (file && file.type.startsWith('video/')) {
+    const validation = validateVideoFile(file);
+    
+    if (validation.isValid) {
       setSelectedFile(file);
       setUploadError('');
       setProcessingStatus(null);
       setUploadProgress(0);
       setUploading(false);
     } else {
-      setUploadError('Por favor selecciona un archivo de video válido');
+      setUploadError(validation.errors.join('. '));
       setSelectedFile(null);
     }
   };
@@ -336,6 +353,13 @@ const UploadVideoView = ({
   const handleUpload = async () => {
     if (!selectedFile || !videoTitle.trim()) {
       setUploadError('Por favor proporciona un título y selecciona un archivo de video');
+      return;
+    }
+
+    // Validate file again before upload
+    const validation = validateVideoFile(selectedFile);
+    if (!validation.isValid) {
+      setUploadError(validation.errors.join('. '));
       return;
     }
 
@@ -462,7 +486,7 @@ const UploadVideoView = ({
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept="video/*"
+                    accept=".mp4,.avi,.mov,video/mp4,video/avi,video/mov,video/quicktime"
                     onChange={(e) => handleFileSelect(e.target.files[0])}
                     className="hidden"
                   />
@@ -477,9 +501,17 @@ const UploadVideoView = ({
               <div className="text-center">
                 <Video className="w-20 h-20 mx-auto mb-4 text-orange-500" />
                 <p className="text-xl mb-2 text-gray-700 font-semibold">{selectedFile.name}</p>
-                <p className="text-gray-500 mb-6">
-                  Tamaño: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                </p>
+                <div className="text-gray-500 mb-6 space-y-1">
+                  <p className={`${selectedFile.size > VIDEO_VALIDATIONS.MAX_SIZE ? 'text-red-500 font-semibold' : ''}`}>
+                    Tamaño: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                    {selectedFile.size > VIDEO_VALIDATIONS.MAX_SIZE && ' (¡Supera el límite de 100MB!)'}
+                  </p>
+                  <p>Tipo: {selectedFile.type || 'Desconocido'}</p>
+                  <div className="flex items-center mt-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-600">Formato válido</span>
+                  </div>
+                </div>
                 <div className="flex gap-4 justify-center">
                   <button
                     onClick={() => setSelectedFile(null)}
@@ -611,6 +643,53 @@ const UploadVideoView = ({
       </div>
     </div>
   );
+};
+
+// Video Validation Utilities
+const VIDEO_VALIDATIONS = {
+  MAX_SIZE: 100 * 1024 * 1024, // 100MB in bytes
+  ALLOWED_TYPES: ['video/mp4', 'video/avi', 'video/mov', 'video/quicktime'],
+  ALLOWED_EXTENSIONS: ['.mp4', '.avi', '.mov']
+};
+
+const validateVideoFile = (file) => {
+  const errors = [];
+  
+  if (!file) {
+    errors.push('Por favor selecciona un archivo de video');
+    return { isValid: false, errors };
+  }
+
+  // Check file size (100MB max)
+  if (file.size > VIDEO_VALIDATIONS.MAX_SIZE) {
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
+    errors.push(`El archivo es demasiado grande (${sizeInMB}MB). El tamaño máximo permitido es 100MB`);
+  }
+
+  // Check file type
+  const fileName = file.name.toLowerCase();
+  const hasValidExtension = VIDEO_VALIDATIONS.ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+  const hasValidType = VIDEO_VALIDATIONS.ALLOWED_TYPES.includes(file.type);
+
+  if (!hasValidExtension && !hasValidType) {
+    errors.push('Formato de archivo no válido. Solo se permiten archivos MP4, AVI y MOV');
+  }
+
+  // Additional checks for file integrity
+  if (file.size === 0) {
+    errors.push('El archivo está vacío o dañado');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    fileInfo: {
+      name: file.name,
+      size: file.size,
+      sizeFormatted: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+      type: file.type
+    }
+  };
 };
 
 // API Service
