@@ -1,287 +1,362 @@
 {
-  "info": {
-    "name": "ANB Rising Stars API",
-    "description": "API para la plataforma ANB Rising Stars Showcase",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_postman_id": "12345678-1234-1234-1234-123456789abc",
-    "version": "1.0.0"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{access_token}}",
-        "type": "string"
-      }
-    ]
-  },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8080/api",
-      "type": "string"
-    },
-    {
-      "key": "base_url_health",
-      "value": "http://localhost:8080",
-      "type": "string"
-    },
-    {
-      "key": "deploy_url",
-      "value": "http://ip_de_su_proyecto:8080/api",
-      "type": "string"
-    },
-    {
-      "key": "access_token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "user_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "video_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "test_email",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "test_password",
-      "value": "",
-      "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "Authentication",
-      "item": [
-        {
-          "name": "Register User",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "let random = Math.floor(Math.random() * 100000);",
-                  "let email = `juan.perez.${random}@example.com`;",
-                  "pm.environment.set(\"test_email\", email);",
-                  "pm.environment.set(\"test_password\", \"SecurePass123!\");"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "pm.test(\"Response has message\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('message');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Juan\",\n  \"last_name\": \"Pérez\",\n  \"email\": \"{{test_email}}\",\n  \"password1\": \"{{test_password}}\",\n  \"password2\": \"{{test_password}}\",\n  \"city\": \"Bogotá\",\n  \"country\": \"Colombia\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/signup",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "signup"]
-            }
-          }
-        },
-        {
-          "name": "Login User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "let jsonData = pm.response.json();",
-                  "pm.environment.set(\"access_token\", jsonData.access_token);",
-                  "pm.test(\"Response has access token\", function () {",
-                  "    pm.expect(jsonData).to.have.property('access_token');",
-                  "});",
-                  "pm.test(\"Token type is Bearer\", function () {",
-                  "    pm.expect(jsonData.token_type).to.eql('Bearer');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "login"]
-            }
-          }
-        },
-        {
-          "name": "Get Profile",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "let jsonData = pm.response.json();",
-                  "pm.environment.set(\"user_id\", jsonData.id);",
-                  "pm.test(\"Response has user data\", function () {",
-                  "    pm.expect(jsonData).to.have.property('email');",
-                  "    pm.expect(jsonData).to.have.property('first_name');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/profile",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "profile"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Videos Management",
-      "item": [
-        {
-          "name": "Upload Video",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "video_file", "type": "file", "src": "./collections/test-video.mp4" },
-                { "key": "title", "value": "Mi mejor jugada de baloncesto", "type": "text" }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/videos/upload",
-              "host": ["{{base_url}}"],
-              "path": ["videos", "upload"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set(\"video_id\", jsonData.task_id || jsonData.video_id);",
-                  "pm.test(\"Response has task_id\", function () {",
-                  "    pm.expect(jsonData).to.have.property('task_id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get My Videos",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/videos",
-              "host": ["{{base_url}}"],
-              "path": ["videos"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Response is an array\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.be.an('array');",
-                  "    if (jsonData.length > 0) {",
-                  "        pm.environment.set('video_id', jsonData[0].video_id);",
-                  "    }",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Health Check",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url_health}}/health",
-          "host": ["{{base_url_health}}"],
-          "path": ["health"]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "    pm.response.to.have.status(200);",
-              "});",
-              "var jsonData = pm.response.json();",
-              "pm.test(\"Health status is healthy\", function () {",
-              "    pm.expect(jsonData.status).to.eql('healthy');",
-              "});"
-            ]
-          }
-        }
-      ]
-    }
-  ]
+	"info": {
+		"_postman_id": "2f0297d4-26aa-4264-a565-6729a0a0d49a",
+		"name": "ANB Rising Stars API",
+		"description": "API para la plataforma ANB Rising Stars Showcase",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47729734",
+		"_collection_link": "https://jj-ramosr1-4111465.postman.co/workspace/Jaime-Ramos's-Workspace~fb582235-9b60-4c47-82fc-d24b6f51184a/collection/47729734-2f0297d4-26aa-4264-a565-6729a0a0d49a?action=share&source=collection_link&creator=47729734"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Signup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Jaime\", \n    \"last_name\": \"Ramos\",\n    \"email\": \"jaime@example.com\",\n    \"password1\": \"StrongPass123\",\n    \"password2\": \"StrongPass123\",\n    \"city\": \"Bogotá\",\n    \"country\": \"Colombia\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"jaime@example.com\",\n  \"password\": \"StrongPass123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Videos",
+			"item": [
+				{
+					"name": "Upload Video",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "video_file",
+									"type": "file",
+									"src": "/Users/jaime/projects/uniandes/videos de prueba proyecto 1/internet-musica.mp4"
+								},
+								{
+									"key": "title",
+									"value": "testing",
+									"type": "text"
+								},
+								{
+									"key": "is_public",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/videos/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"videos",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Videos",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/videos",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"videos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Video Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/videos/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"videos",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Video",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/videos/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"videos",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Ranking",
+			"item": [
+				{
+					"name": "List Public Videos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/videos",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"videos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Vote Video",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vote_type\": \"upvote\" \n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ranking/public/{{video_id}}/vote",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ranking",
+								"public",
+								"{{video_id}}",
+								"vote"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Rankings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/public/rankings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"rankings"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Health status is healthy\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql('healthy');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost",
+			"type": "string"
+		},
+		{
+			"key": "deploy_url",
+			"value": "http://ip_de_su_proyecto:8080/api",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "video_id",
+			"value": "",
+			"type": "string"
+		}
+	]
 }
