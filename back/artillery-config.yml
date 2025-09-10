@@ -1,0 +1,50 @@
+config:
+  target: 'http://localhost:8080'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warmup"
+    - duration: 120
+      arrivalRate: 10
+      name: "Normal load"
+    - duration: 60
+      arrivalRate: 20
+      name: "Peak load"
+
+scenarios:
+  - name: "Health check"
+    weight: 20
+    flow:
+      - get:
+          url: "/health"
+  
+  - name: "Get public videos"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/public/videos"
+  
+  - name: "Get rankings"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/public/rankings"
+  
+  - name: "User registration and login"
+    weight: 10
+    flow:
+      - post:
+          url: "/api/auth/signup"
+          json:
+            first_name: "Test"
+            last_name: "User"
+            email: "test{{ $randomString() }}@example.com"
+            password1: "TestPass123!"
+            password2: "TestPass123!"
+            city: "TestCity"
+            country: "TestCountry"
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "TestPass123!"

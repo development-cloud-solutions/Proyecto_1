@@ -271,7 +271,6 @@ _book
 # eBook build output
 *.epub
 *.mobi
-*.pdf
 
 ### Go ###
 # If you prefer the allow list template instead of the deny list, see community template:
