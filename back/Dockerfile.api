@@ -1,0 +1,32 @@
+# -- Etapa de compilación
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+
+# Copiar go.mod y go.sum para descargar dependencias
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copiar el código fuente
+COPY . .
+
+# Construir el binario de la API
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main cmd/api/main.go
+
+# -- Etapa final (imagen ligera)
+FROM alpine:latest
+
+# Instalar dependencias runtime y certicifados
+RUN apk --no-cache add ca-certificates ffmpeg
+
+WORKDIR /app
+
+# Copiar el binario compilado 
+COPY --from=builder /app/main .
+#COPY --from=builder /app/assets ./assets
+
+# Exponer el puerto
+EXPOSE 8080
+
+# Comando de inicio
+CMD ["./main"]

@@ -1,0 +1,37 @@
+# -- Etapa de compilación
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+
+# Copiar go.mod y go.sum para descargar dependencias
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copiar el código fuente
+COPY . .
+
+# Construir el binario del worker
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/worker cmd/worker/main.go
+
+# -- Etapa final (imagen ligera)
+FROM alpine:latest
+
+# Instalar dependencias runtime y certicifados
+RUN apk --no-cache add ca-certificates ffmpeg
+
+WORKDIR /app
+
+# Copiar el binario del worker
+COPY --from=builder /app/worker .
+
+# Copiar assets (marca de agua)
+COPY assets/ /app/assets/
+
+# Crear directorios
+RUN mkdir -p uploads processed
+
+# Establecer la variable de entorno
+ENV WORKER_MODE=true
+
+# Comando de inicio
+CMD ["./worker"]

@@ -1,0 +1,14 @@
+.git
+.gitignore
+README.md
+.env
+.env.local
+Dockerfile
+docker-compose.yml
+node_modules
+*.log
+.DS_Store
+.vscode
+.idea
+tmp/
+vendor/
