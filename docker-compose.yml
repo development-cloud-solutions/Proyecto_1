@@ -5,10 +5,11 @@ services:
     image: postgres:15-alpine
     container_name: anb_postgres
     environment:
-      POSTGRES_DB: proyecto_1
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      - POSTGRES_DB=proyecto_1
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+      - TZ=America/Bogota
     volumes:
       - ./db/001_create_users.down.sql:/docker-entrypoint-initdb.d/001_create_users.down.sql
       - ./db/001_create_users.up.sql:/docker-entrypoint-initdb.d/001_create_users.up.sql
@@ -38,6 +39,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: anb_redis
+    environment:
+      - TZ=America/Bogota
     ports:
       - "6379:6379"
     volumes:
@@ -61,6 +64,7 @@ services:
     env_file:
       - ./back/.env
     environment:
+      - TZ=America/Bogota
       # Server configuration
       - PORT=8080
       - HOST=0.0.0.0
@@ -81,7 +85,7 @@ services:
       - UPLOAD_PATH=/app/uploads
       - PROCESSED_PATH=/app/processed
       - MAX_FILE_SIZE=104857600
-      - WORKER_CONCURRENCY=5
+      - WORKER_CONCURRENCY=8
     volumes:
       - video_uploads:/app/uploads
       - video_processed:/app/processed
@@ -94,17 +98,17 @@ services:
       - anb_network
     restart: unless-stopped
 
-  worker:
-    # Usar el Dockerfile específico para el worker
+  # Worker 1 - Procesamiento principal con alta concurrencia
+  worker1:
     build:
       context: ./back
       dockerfile: Dockerfile.worker
-    container_name: anb_worker
+    container_name: anb_worker_1
     command: ./worker
     env_file:
       - ./back/.env
     environment:
-      # Database configuration
+      - TZ=America/Bogota
       - DB_DRIVER=postgres
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -112,13 +116,48 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_SSL_MODE=disable
-
       - REDIS_URL=redis:6379
       - WORKER_MODE=true
       - ENVIRONMENT=development
       - UPLOAD_PATH=/app/uploads
       - PROCESSED_PATH=/app/processed
-      - WORKER_CONCURRENCY=3
+      - WORKER_CONCURRENCY=12  # Concurrencia
+    volumes:
+      - video_uploads:/app/uploads
+      - video_processed:/app/processed
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - anb_network
+    restart: unless-stopped
+
+  # Worker 2 - Worker secundario para balanceo de carga
+  worker2:
+    build:
+      context: ./back
+      dockerfile: Dockerfile.worker
+    container_name: anb_worker_2
+    command: ./worker
+    env_file:
+      - ./back/.env
+    environment:
+      - TZ=America/Bogota
+      - DB_DRIVER=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=proyecto_1
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_SSL_MODE=disable
+      - REDIS_URL=redis:6379
+      - WORKER_MODE=true
+      - ENVIRONMENT=development
+      - UPLOAD_PATH=/app/uploads
+      - PROCESSED_PATH=/app/processed
+      - WORKER_CONCURRENCY=8   # Concurrencia 
     volumes:
       - video_uploads:/app/uploads
       - video_processed:/app/processed
@@ -140,6 +179,7 @@ services:
       - "3000:80"
     environment:
       - VITE_API_URL=http://localhost:8080
+      - TZ=America/Bogota
     depends_on:
       - api
     networks:
@@ -149,6 +189,8 @@ services:
   nginx:
     image: nginx:alpine
     container_name: anb_nginx
+    environment:
+      - TZ=America/Bogota
     ports:
       - "80:80"
       - "443:443"
@@ -157,7 +199,8 @@ services:
       - video_processed:/usr/share/nginx/html/videos
     depends_on:
       - api
-      - worker
+      - worker1
+      #- worker2
       - frontend
     networks:
       - anb_network

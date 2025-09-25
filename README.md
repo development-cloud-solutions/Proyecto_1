@@ -87,6 +87,8 @@ Proyecto_1/
 ├── docs/
 │   ├── Entrega_1/
 │   │   ├── ISIS4426_Entrega_1_Req.pdf
+│   ├── Video/
+│   │   ├── Test_Video.mp4
 ├── front/
 │   ├── .env
 │   ├── .env.example
@@ -121,7 +123,10 @@ Proyecto_1/
 - La carpeta `back` contiene el código correspondiente a GO, con su respectivo `README.md`
 - La carpeta `db` contiene el código SQL para la creación de objetos en la base de datos
 - La carpeta `docs/Entrega_1` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+- La carpeta `docs/Entrega_2` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+- La carpeta `docs/Video` contiene un vídeo para pruebas tanto de carga como de uso en la API.
 - La carpeta `front` contiene el código correspondiente a la interfaz gráfica desarrollada en React, con su respectivo `README.md`
+- La carpeta `sustentacion` contiene el respectivo `README.md` con el enlace a publicacion del video de demostración.
 
 ## Ejecución del proyecto
 

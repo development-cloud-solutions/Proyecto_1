@@ -16,8 +16,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main cmd/api/main.go
 # -- Etapa final (imagen ligera)
 FROM alpine:latest
 
-# Instalar dependencias runtime y certicifados
-RUN apk --no-cache add ca-certificates ffmpeg
+# Instalar dependencias runtime y certificados
+RUN apk --no-cache add ca-certificates ffmpeg tzdata
+
+# Establecer zona horaria
+ENV TZ=America/Bogota
 
 WORKDIR /app
 

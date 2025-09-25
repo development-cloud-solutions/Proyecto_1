@@ -74,8 +74,7 @@ class ApiService {
     return response;
   }
 
-  // Note: added route to Go backend
-  // authGroup.GET("/profile", middleware.AuthMiddleware(cfg), authHandler.GetProfile)
+  
   async getProfile() {
     return await this.request('/api/auth/profile');
   }
@@ -91,7 +90,7 @@ class ApiService {
       headers: {
         Authorization: `Bearer ${this.token}`,
       },
-      body: formData, // Don't set Content-Type for FormData
+      body: formData, 
     });
 
     if (!response.ok) {
@@ -131,9 +130,13 @@ class ApiService {
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
     if (city && city !== 'todas') params.append('city', city);
-    
+
     const query = params.toString() ? `?${params.toString()}` : '';
     return await this.request(`/api/public/rankings${query}`);
+  }
+
+  async getUserVotes() {
+    return await this.request('/api/user/votes');
   }
 
   logout() {

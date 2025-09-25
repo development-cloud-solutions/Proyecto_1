@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Play, Trophy, User, Home, LogOut, ThumbsUp, Video, Star, TrendingUp, CheckCircle, Clock, XCircle, Loader2, ChevronRight, Award, Users, MapPin, Calendar, Eye, Filter, BarChart3, Shield } from 'lucide-react';
 
 // Componente UploadVideo separado para evitar re-renders
-const UploadVideo = ({ 
-  selectedFile, 
+const UploadVideo = ({
+  selectedFile,
   setSelectedFile,
   videoTitle,
   setVideoTitle,
@@ -43,7 +43,7 @@ const UploadVideo = ({
 
   const handleFileSelect = (file) => {
     const validation = validateVideoFile(file);
-    
+
     if (validation.isValid) {
       setSelectedFile(file);
       setUploadError('');
@@ -73,7 +73,7 @@ const UploadVideo = ({
     setProcessingStatus('uploading');
     setUploadProgress(0);
     setUploadError('');
-    
+
     // Simulate upload progress
     let progress = 0;
     const interval = setInterval(() => {
@@ -157,8 +157,8 @@ const UploadVideo = ({
                   </span>
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  {videoIsPublic 
-                    ? 'Tu video será visible en la votación pública y en tu perfil' 
+                  {videoIsPublic
+                    ? 'Tu video será visible en la votación pública y en tu perfil'
                     : 'Los videos privados solo serán visibles en tu perfil personal'
                   }
                 </p>
@@ -167,13 +167,12 @@ const UploadVideo = ({
 
             {!processingStatus && (
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-                  dragActive
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${dragActive
                     ? 'border-orange-500 bg-orange-50'
                     : selectedFile
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50'
-                }`}
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50'
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -265,8 +264,8 @@ const UploadVideo = ({
                         {videoIsPublic ? '¡Video procesado con éxito!' : '¡Video procesado con éxito!'}
                       </p>
                       <p className="text-gray-600">
-                        {videoIsPublic 
-                          ? 'Video Público: Tu video está disponible en la votación pública' 
+                        {videoIsPublic
+                          ? 'Video Público: Tu video está disponible en la votación pública'
                           : 'Video Privado: Tu video solo será visible en tu perfil personal'
                         }
                       </p>
@@ -295,8 +294,8 @@ const UploadVideo = ({
 };
 
 // Sistema de carga de videos (componente optimizado para evitar pérdida de focus)
-const UploadVideoView = ({ 
-  selectedFile, 
+const UploadVideoView = ({
+  selectedFile,
   setSelectedFile,
   videoTitle,
   setVideoTitle,
@@ -337,7 +336,7 @@ const UploadVideoView = ({
 
   const handleFileSelect = (file) => {
     const validation = validateVideoFile(file);
-    
+
     if (validation.isValid) {
       setSelectedFile(file);
       setUploadError('');
@@ -367,7 +366,7 @@ const UploadVideoView = ({
     setProcessingStatus('uploading');
     setUploadProgress(0);
     setUploadError('');
-    
+
     // Simulate upload progress
     let progress = 0;
     const interval = setInterval(() => {
@@ -381,7 +380,7 @@ const UploadVideoView = ({
       clearInterval(interval);
       setUploadProgress(100);
       setProcessingStatus('processing');
-      
+
       setTimeout(() => {
         setProcessingStatus('completed');
         setUploading(false);
@@ -400,7 +399,7 @@ const UploadVideoView = ({
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-4xl font-bold mb-8 text-gray-800">Sube tu Video de Prueba</h2>
-        
+
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
             <h3 className="text-2xl font-bold mb-2">Requisitos del Video</h3>
@@ -462,8 +461,8 @@ const UploadVideoView = ({
                   </span>
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  {videoIsPublic 
-                    ? 'Tu video será visible en la votación pública y en tu perfil' 
+                  {videoIsPublic
+                    ? 'Tu video será visible en la votación pública y en tu perfil'
                     : 'Los videos privados solo serán visibles en tu perfil personal'
                   }
                 </p>
@@ -472,9 +471,8 @@ const UploadVideoView = ({
 
             {!selectedFile && !processingStatus && (
               <div
-                className={`border-3 border-dashed rounded-2xl p-12 text-center transition-all ${
-                  dragActive ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-orange-400'
-                }`}
+                className={`border-3 border-dashed rounded-2xl p-12 text-center transition-all ${dragActive ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-orange-400'
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -538,7 +536,7 @@ const UploadVideoView = ({
                       <span className="text-2xl font-bold text-orange-600">{uploadProgress}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                      <div 
+                      <div
                         className="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       />
@@ -555,10 +553,10 @@ const UploadVideoView = ({
                         <span className="text-4xl">🏀</span>
                       </div>
                     </div>
-                    
+
                     <p className="text-2xl font-semibold text-gray-700 mb-4">Procesando tu video...</p>
                     <p className="text-sm text-gray-500 mb-6">Este proceso puede tomar unos minutos. No cierres la ventana.</p>
-                    
+
                     <div className="space-y-3 text-left max-w-md mx-auto">
                       <div className="flex items-center p-3 bg-green-50 rounded-lg">
                         <CheckCircle className="text-green-500 mr-3 flex-shrink-0" size={20} />
@@ -581,7 +579,7 @@ const UploadVideoView = ({
                         <span className="text-sm text-gray-600">Optimizando para streaming</span>
                       </div>
                     </div>
-                    
+
                     <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-xl">
                       <p className="text-sm text-orange-800">
                         <strong>Tip:</strong> Mientras esperas, puedes preparar la descripción de tu próximo video o explorar los rankings actuales.
@@ -595,7 +593,7 @@ const UploadVideoView = ({
                     <CheckCircle className="w-20 h-20 mx-auto mb-4 text-green-500" />
                     <p className="text-3xl font-bold text-gray-800 mb-2">¡Video procesado con éxito!</p>
                     <p className="text-gray-600 mb-6">{videoIsPublic ? 'Tu video ya está disponible para votación pública' : 'Tu video privado ha sido guardado'}</p>
-                    
+
                     <div className={`${videoIsPublic ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'} border rounded-xl p-4 mb-6 max-w-md mx-auto`}>
                       <p className={`${videoIsPublic ? 'text-green-800' : 'text-blue-800'} text-sm`}>
                         {videoIsPublic ? (
@@ -609,7 +607,7 @@ const UploadVideoView = ({
                         )}
                       </p>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
                         onClick={() => {
@@ -654,7 +652,7 @@ const VIDEO_VALIDATIONS = {
 
 const validateVideoFile = (file) => {
   const errors = [];
-  
+
   if (!file) {
     errors.push('Por favor selecciona un archivo de video');
     return { isValid: false, errors };
@@ -703,7 +701,7 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config = {
       headers: {
         'Content-Type': 'application/json',
@@ -718,11 +716,11 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (response.status === 204) {
         return {};
       }
-      
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -761,12 +759,12 @@ class ApiService {
         password,
       }),
     });
-    
+
     if (response.access_token) {
       this.token = response.access_token;
       localStorage.setItem('access_token', response.access_token);
     }
-    
+
     return response;
   }
 
@@ -815,7 +813,7 @@ class ApiService {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit);
     if (city && city !== 'todas') params.append('city', city);
-    
+
     const query = params.toString() ? `?${params.toString()}` : '';
     return await this.request(`/api/public/rankings${query}`);
   }
@@ -849,7 +847,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [votedVideos, setVotedVideos] = useState(new Set());
   const [videoIsPublic, setVideoIsPublic] = useState(false);
-  
+
   // Estados para upload de video
   const [selectedFile, setSelectedFile] = useState(null);
   const [videoTitle, setVideoTitle] = useState('');
@@ -901,7 +899,7 @@ const App = () => {
             setVideos([]);
           }
         }
-        
+
         if (currentView === 'rankings' || currentView === 'dashboard') {
           try {
             const topRankings = await apiService.getTopRankings(50, selectedCity);
@@ -952,7 +950,7 @@ const App = () => {
     <nav className="bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 text-white shadow-2xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          <div 
+          <div
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => setCurrentView('landing')}
           >
@@ -964,7 +962,7 @@ const App = () => {
               <p className="text-xs opacity-90">Showcase 2025</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4 md:space-x-6">
             {user && (
               <>
@@ -998,7 +996,7 @@ const App = () => {
                 </button>
               </>
             )}
-            
+
             {user ? (
               <div className="flex items-center space-x-3">
                 <button
@@ -1050,7 +1048,7 @@ const App = () => {
       <div className="min-h-screen bg-gradient-to-br from-orange-600 to-orange-400">
         <div className="relative">
           <div className="absolute inset-0 bg-black/40"></div>
-          
+
           <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-24">
             <div className="text-center text-white">
               <div className="mb-8">
@@ -1061,12 +1059,12 @@ const App = () => {
                   SHOWCASE 2025
                 </div>
               </div>
-              
+
               <p className="text-lg md:text-xl lg:text-2xl mb-12 opacity-90 max-w-3xl mx-auto leading-relaxed">
-                ¿Tienes lo que se necesita para ser la próxima estrella del baloncesto nacional? 
+                ¿Tienes lo que se necesita para ser la próxima estrella del baloncesto nacional?
                 Demuestra tu talento y compite por un lugar en el torneo más importante del año.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
                 <button
                   onClick={() => setCurrentView('login')}
@@ -1091,9 +1089,8 @@ const App = () => {
                     <div
                       key={index}
                       onMouseEnter={() => setActiveFeature(index)}
-                      className={`bg-white/10 backdrop-blur-lg rounded-2xl p-6 transform transition-all duration-500 cursor-pointer ${
-                        activeFeature === index ? 'scale-110 bg-white/20' : 'hover:scale-105'
-                      }`}
+                      className={`bg-white/10 backdrop-blur-lg rounded-2xl p-6 transform transition-all duration-500 cursor-pointer ${activeFeature === index ? 'scale-110 bg-white/20' : 'hover:scale-105'
+                        }`}
                     >
                       <Icon className="w-12 h-12 text-orange-400 mx-auto mb-4" />
                       <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
@@ -1157,7 +1154,7 @@ const App = () => {
             setError('Passwords do not match');
             return;
           }
-          
+
           await apiService.signup(formData);
           await apiService.login(formData.email, formData.password);
           const profile = await apiService.getProfile();
@@ -1182,7 +1179,7 @@ const App = () => {
               {isLogin ? 'Ingresa para ver tu progreso' : 'Comienza tu camino al estrellato'}
             </p>
           </div>
-          
+
           <div className="p-8 space-y-4">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
@@ -1199,7 +1196,7 @@ const App = () => {
                     required={!isLogin}
                     className="p-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     value={formData.firstName}
-                    onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                   />
                   <input
                     type="text"
@@ -1207,15 +1204,15 @@ const App = () => {
                     required={!isLogin}
                     className="p-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     value={formData.lastName}
-                    onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   />
                 </div>
-                
+
                 <select
                   className="w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                   value={formData.city}
                   required={!isLogin}
-                  onChange={(e) => setFormData({...formData, city: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 >
                   <option value="">Selecciona tu ciudad *</option>
                   {cities.slice(1).map(city => (
@@ -1224,23 +1221,23 @@ const App = () => {
                 </select>
               </>
             )}
-            
+
             <input
               type="email"
               placeholder="Correo electrónico *"
               required
               className="w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
-            
+
             <input
               type="password"
               placeholder="Contraseña *"
               required
               className="w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
               value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
 
             {!isLogin && (
@@ -1251,7 +1248,7 @@ const App = () => {
                   required={!isLogin}
                   className="w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   value={formData.confirmPassword}
-                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 />
 
                 <div className="flex items-start space-x-2 text-sm text-gray-600">
@@ -1260,7 +1257,7 @@ const App = () => {
                 </div>
               </>
             )}
-            
+
             <button
               onClick={handleSubmit}
               disabled={formLoading}
@@ -1269,7 +1266,7 @@ const App = () => {
               {formLoading ? 'Cargando...' : (isLogin ? 'Ingresar' : 'Crear Cuenta')}
             </button>
           </div>
-          
+
           <div className="pb-6 text-center">
             <p className="text-gray-600">
               {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
@@ -1308,7 +1305,7 @@ const App = () => {
             </h1>
             <p className="text-gray-600">Este es tu panel de control para Rising Stars Showcase 2025</p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
@@ -1341,7 +1338,7 @@ const App = () => {
                 <Video className="mr-2" />
                 Mis Videos de Competencia
               </h3>
-              
+
               {myVideos.length > 0 ? (
                 <div className="space-y-4">
                   {myVideos.slice(0, 3).map(video => (
@@ -1350,14 +1347,13 @@ const App = () => {
                       <div className="relative z-10 text-white">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-lg font-semibold truncate">{video.title}</h4>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            video.status === 'processed' ? 'bg-green-500' :
-                            video.status === 'processing' ? 'bg-yellow-500' :
-                            video.status === 'uploaded' ? 'bg-blue-500' : 'bg-red-500'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${video.status === 'processed' ? 'bg-green-500' :
+                              video.status === 'processing' ? 'bg-yellow-500' :
+                                video.status === 'uploaded' ? 'bg-blue-500' : 'bg-red-500'
+                            }`}>
                             {video.status === 'processed' ? 'COMPLETADO' :
-                             video.status === 'processing' ? 'PROCESANDO' :
-                             video.status === 'uploaded' ? 'CARGADO' : 'ERROR'}
+                              video.status === 'processing' ? 'PROCESANDO' :
+                                video.status === 'uploaded' ? 'CARGADO' : 'ERROR'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
@@ -1367,7 +1363,7 @@ const App = () => {
                       </div>
                     </div>
                   ))}
-                  
+
                   {myVideos.length > 3 && (
                     <button
                       onClick={() => setCurrentView('profile')}
@@ -1404,11 +1400,11 @@ const App = () => {
                     <span className="font-bold">{totalVotes} / 3,000</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all" 
-                         style={{ width: `${Math.min((totalVotes / 3000) * 100, 100)}%` }}></div>
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min((totalVotes / 3000) * 100, 100)}%` }}></div>
                   </div>
                 </div>
-                
+
                 <div className="pt-4 border-t">
                   <p className="text-sm text-gray-600 mb-3">Posición en tu ciudad</p>
                   <div className="flex items-center justify-between">
@@ -1465,11 +1461,11 @@ const App = () => {
               const isOtherUser = video.user_id !== user?.id;
               return isPublic && isOtherUser;
             }).length === 0 && (
-              <div className="text-center py-8">
-                <Video className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                <p className="text-gray-500">No hay videos públicos de otros usuarios disponibles para votar</p>
-              </div>
-            )}
+                <div className="text-center py-8">
+                  <Video className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                  <p className="text-gray-500">No hay videos públicos de otros usuarios disponibles para votar</p>
+                </div>
+              )}
           </div>
         </div>
       </div>
@@ -1487,7 +1483,7 @@ const App = () => {
       if (selectedCityFilter === 'todas') {
         setFilteredVideos(videos);
       } else {
-        const filtered = videos.filter(video => 
+        const filtered = videos.filter(video =>
           video.user_city && video.user_city.toLowerCase() === selectedCityFilter.toLowerCase()
         );
         setFilteredVideos(filtered);
@@ -1499,7 +1495,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold mb-8 text-gray-800">Videos de Competencia</h2>
           <p className="text-gray-600 mb-6">Vota por los mejores videos y ayuda a determinar a los finalistas</p>
-          
+
           <div className="mb-6 flex flex-wrap gap-2">
             <div className="flex items-center space-x-2 text-sm text-gray-600 mr-4">
               <Filter size={16} />
@@ -1509,11 +1505,10 @@ const App = () => {
               <button
                 key={city}
                 onClick={() => setSelectedCityFilter(city.toLowerCase())}
-                className={`px-5 py-2 rounded-full font-semibold transition-all ${
-                  selectedCityFilter === city.toLowerCase()
+                className={`px-5 py-2 rounded-full font-semibold transition-all ${selectedCityFilter === city.toLowerCase()
                     ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
                     : 'bg-white text-gray-700 hover:bg-orange-50 shadow'
-                }`}
+                  }`}
               >
                 {city}
               </button>
@@ -1528,7 +1523,7 @@ const App = () => {
           ) : (
             <>
               <div className="mb-4 text-sm text-gray-600">
-                Mostrando {filteredVideos.length} video{filteredVideos.length !== 1 ? 's' : ''} 
+                Mostrando {filteredVideos.length} video{filteredVideos.length !== 1 ? 's' : ''}
                 {selectedCityFilter !== 'todas' && ` de ${cities.find(c => c.toLowerCase() === selectedCityFilter)}`}
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -1569,17 +1564,16 @@ const App = () => {
           <h2 className="text-4xl font-bold text-gray-800 mb-2">Rankings Rising Stars 2025</h2>
           <p className="text-gray-600">Los mejores jugadores de cada ciudad competirán en el Showcase final</p>
         </div>
-        
+
         <div className="mb-6 flex flex-wrap gap-2">
           {cities.map(city => (
             <button
               key={city}
               onClick={() => setSelectedCity(city.toLowerCase())}
-              className={`px-5 py-2 rounded-full font-semibold transition-all ${
-                selectedCity === city.toLowerCase()
+              className={`px-5 py-2 rounded-full font-semibold transition-all ${selectedCity === city.toLowerCase()
                   ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
                   : 'bg-white text-gray-700 hover:bg-orange-50 shadow'
-              }`}
+                }`}
             >
               {city}
             </button>
@@ -1593,7 +1587,7 @@ const App = () => {
             </h3>
             <p className="text-sm opacity-90 mt-1">Actualizado en tiempo real</p>
           </div>
-          
+
           <div className="divide-y divide-gray-100">
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -1621,19 +1615,19 @@ const App = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-6">
                       <div className="text-right">
                         <div className="text-3xl font-bold text-gray-800">{(player.votes || 0).toLocaleString()}</div>
                         <div className="text-sm text-gray-500">votos</div>
                       </div>
-                      
+
                       <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all">
                         Ver Video
                       </button>
                     </div>
                   </div>
-                  
+
                   {index < 3 && (
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <div className="flex items-center justify-between text-sm">
@@ -1656,7 +1650,7 @@ const App = () => {
             )}
           </div>
         </div>
-        
+
         <div className="mt-8 bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-gray-800 mb-2">📊 Estadísticas de Votación</h3>
           <div className="grid md:grid-cols-4 gap-4 text-center">
@@ -1682,7 +1676,7 @@ const App = () => {
     </div>
   );
 
-  // Perfil mejorado
+  // Perfil 
   const Profile = () => (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
@@ -1754,15 +1748,14 @@ const App = () => {
                             </p>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              video.status === 'processed' ? 'bg-green-100 text-green-800' :
-                              video.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                              video.status === 'uploaded' ? 'bg-blue-100 text-blue-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${video.status === 'processed' ? 'bg-green-100 text-green-800' :
+                                video.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                                  video.status === 'uploaded' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-red-100 text-red-800'
+                              }`}>
                               {video.status === 'processed' ? 'Procesado' :
-                               video.status === 'processing' ? 'Procesando' :
-                               video.status === 'uploaded' ? 'Subido' : 'Error'}
+                                video.status === 'processing' ? 'Procesando' :
+                                  video.status === 'uploaded' ? 'Subido' : 'Error'}
                             </span>
                             <span className="text-sm font-bold text-gray-700">{video.votes || 0} votos</span>
                           </div>
@@ -1785,26 +1778,7 @@ const App = () => {
                 )}
               </div>
 
-              <div className="border rounded-xl p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-800 flex items-center">
-                  <Shield className="mr-2" />
-                  Configuración de Privacidad
-                </h3>
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Perfil público</span>
-                    <input type="checkbox" defaultChecked className="w-5 h-5 text-orange-500" />
-                  </label>
-                  <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Mostrar estadísticas</span>
-                    <input type="checkbox" defaultChecked className="w-5 h-5 text-orange-500" />
-                  </label>
-                  <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Recibir notificaciones</span>
-                    <input type="checkbox" defaultChecked className="w-5 h-5 text-orange-500" />
-                  </label>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>
@@ -1812,7 +1786,7 @@ const App = () => {
     </div>
   );
 
-  // Componente de tarjeta de video mejorado
+  // Componente de tarjeta de video
   const VideoCard = ({ video, detailed = false }) => {
     const [voted, setVoted] = useState(votedVideos.has(video.video_id));
     const [isPlaying, setIsPlaying] = useState(false);
@@ -1820,48 +1794,46 @@ const App = () => {
     const [localVoteCount, setLocalVoteCount] = useState(video.votes || 0);
     const [isVoting, setIsVoting] = useState(false);
 
-    // Update voted state when votedVideos changes
+    // Actualizar estado de videos votados
     useEffect(() => {
       setVoted(votedVideos.has(video.video_id));
     }, [votedVideos, video.video_id]);
-    
+
     const handleVote = async () => {
       if (!user) {
         setVoteError('Debes iniciar sesión para votar');
         return;
       }
-      
+
       if (voted || isVoting) {
         setVoteError('Ya has votado por este video');
         return;
       }
-      
+
       if (video.status !== 'processed') {
         setVoteError('El video aún está en procesamiento');
         return;
       }
-      
-      // Prevent double-clicking by immediately setting voting state
+
+      // Prevenir double-click 
       setIsVoting(true);
       setVoted(true);
       setVotedVideos(new Set([...votedVideos, video.video_id]));
       setLocalVoteCount(prev => prev + 1);
-      
+
       try {
         setVoteError('');
         const result = await apiService.voteVideo(video.video_id);
-        // Vote successful, keep the optimistic update
-        
+
       } catch (error) {
         console.error('Vote failed:', error);
-        
-        // Revert the optimistic update on error
+
         setVoted(false);
         const newVotedSet = new Set(votedVideos);
         newVotedSet.delete(video.video_id);
         setVotedVideos(newVotedSet);
         setLocalVoteCount(prev => Math.max(0, prev - 1));
-        
+
         if (error.message.includes('400')) {
           setVoteError('Ya has votado por este video');
         } else if (error.message.includes('404')) {
@@ -1905,7 +1877,7 @@ const App = () => {
           ) : (
             <Video className="w-12 h-12 text-white opacity-50" />
           )}
-          
+
           {video.status === 'processing' && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
               <div className="text-center">
@@ -1914,13 +1886,13 @@ const App = () => {
               </div>
             </div>
           )}
-          
+
           <div className="absolute top-2 right-2 bg-black/50 backdrop-blur text-white px-2 py-1 rounded-full text-xs">
             <Eye className="inline mr-1" size={12} />
             {Math.floor(Math.random() * 5000 + 1000)}
           </div>
         </div>
-        
+
         <div className="p-4">
           <h4 className="font-bold text-lg text-gray-800 mb-1 truncate">{video.title}</h4>
           <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
@@ -1930,7 +1902,7 @@ const App = () => {
               {video.user_city}
             </span>
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <span className="text-2xl font-bold text-gray-800">{localVoteCount.toLocaleString()}</span>
@@ -1945,17 +1917,16 @@ const App = () => {
               <button
                 onClick={handleVote}
                 disabled={voted || isVoting || video.status !== 'processed' || !user}
-                className={`px-4 py-2 rounded-full font-semibold transition-all transform ${
-                  voted
+                className={`px-4 py-2 rounded-full font-semibold transition-all transform ${voted
                     ? 'bg-green-500 text-white'
                     : isVoting
-                    ? 'bg-orange-300 text-white cursor-not-allowed'
-                    : video.status === 'processing'
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : !user
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:scale-105'
-                }`}
+                      ? 'bg-orange-300 text-white cursor-not-allowed'
+                      : video.status === 'processing'
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : !user
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:scale-105'
+                  }`}
               >
                 {voted ? (
                   <>
@@ -1992,7 +1963,7 @@ const App = () => {
       {currentView === 'landing' && <LandingPage />}
       {currentView === 'login' && <LoginView />}
       {currentView === 'dashboard' && user && <Dashboard />}
-      {currentView === 'upload' && user && <UploadVideoView 
+      {currentView === 'upload' && user && <UploadVideoView
         selectedFile={selectedFile}
         setSelectedFile={setSelectedFile}
         videoTitle={videoTitle}

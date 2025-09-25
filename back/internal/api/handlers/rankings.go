@@ -189,15 +189,8 @@ func (h *RankingHandler) VoteVideo(c *gin.Context) {
 		return
 	}
 
-	// Actualizar el contador de votos en el video
-	updateCountQuery := `UPDATE videos SET votes_count = votes_count + 1 WHERE id = $1`
-	_, err = tx.Exec(updateCountQuery, videoID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.APIResponse{
-			Error: "Failed to update vote count",
-		})
-		return
-	}
+	// El contador de votos se actualiza automáticamente por el trigger de la base de datos
+	// No necesitamos actualizarlo manualmente aquí para evitar doble conteo
 
 	// Confirmar transacción
 	err = tx.Commit()

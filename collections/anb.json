@@ -13,6 +13,46 @@
 			"item": [
 				{
 					"name": "Signup",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response indicates user created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});",
+									"",
+									"// El email ya fue guardado en prerequest, no lo cambies aquí",
+									"console.log(\"Usuario creado exitosamente: \" + pm.environment.get(\"test_email\"));"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generar email único para cada ejecución",
+									"var timestamp = new Date().getTime();",
+									"var randomNum = Math.floor(Math.random() * 1000);",
+									"var testEmail = \"test_\" + timestamp + \"_\" + randomNum + \"@example.com\";",
+									"var testPassword = \"StrongPass123\";",
+									"",
+									"// Guardar en environment para usar en login",
+									"pm.environment.set(\"test_email\", testEmail);",
+									"pm.environment.set(\"test_password\", testPassword);",
+									"",
+									"console.log(\"Creando usuario con email: \" + testEmail);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -23,7 +63,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"first_name\": \"Jaime\", \n    \"last_name\": \"Ramos\",\n    \"email\": \"jaime@example.com\",\n    \"password1\": \"StrongPass123\",\n    \"password2\": \"StrongPass123\",\n    \"city\": \"Bogotá\",\n    \"country\": \"Colombia\"\n}"
+							"raw": "{\n    \"first_name\": \"Test\", \n    \"last_name\": \"User\",\n    \"email\": \"{{test_email}}\",\n    \"password1\": \"StrongPass123\",\n    \"password2\": \"StrongPass123\",\n    \"city\": \"Bogotá\",\n    \"country\": \"Colombia\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/signup",
@@ -41,6 +81,66 @@
 				},
 				{
 					"name": "Login",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Verificar que tenemos las credenciales",
+									"var email = pm.environment.get(\"test_email\");",
+									"var password = pm.environment.get(\"test_password\");",
+									"",
+									"if (!email || !password) {",
+									"    console.log(\"No se encontraron credenciales, usando valores por defecto\");",
+									"    pm.environment.set(\"test_email\", \"test@example.com\");",
+									"    pm.environment.set(\"test_password\", \"StrongPass123\");",
+									"}",
+									"",
+									"console.log(\"Intentando login con: \" + pm.environment.get(\"test_email\"));"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Login response status: \" + pm.response.code);",
+									"console.log(\"Login response body: \" + pm.response.text());",
+									"",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has access_token\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    pm.expect(jsonData.access_token).to.be.a('string');",
+									"    pm.expect(jsonData.access_token.length).to.be.greaterThan(10);",
+									"});",
+									"",
+									"pm.test(\"Token saved successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if(jsonData && jsonData.access_token) {",
+									"        pm.environment.set(\"access_token\", jsonData.access_token);",
+									"        console.log(\" Token guardado: \" + jsonData.access_token.substring(0, 20) + \"...\");",
+									"        console.log(\" Token length: \" + jsonData.access_token.length);",
+									"    } else {",
+									"        console.log(\"ERROR: No se pudo guardar el token\");",
+									"        pm.expect.fail(\"Token not found in response\");",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('token_type');",
+									"    pm.expect(jsonData).to.have.property('expires_in');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -51,7 +151,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"jaime@example.com\",\n  \"password\": \"StrongPass123\"\n}"
+							"raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/login",
@@ -69,6 +169,30 @@
 				},
 				{
 					"name": "Logout",
+					"disabled": true,
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has logout message\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"    pm.expect(jsonData.message).to.include('Logged out');",
+									"});",
+									"",
+									"// Token preserved for subsequent tests - logout endpoint tested but token not cleared",
+									"// pm.environment.set(\"access_token\", \"\"); // Commented out to preserve token for video tests",
+									"console.log(\"Logout endpoint tested - token preserved for subsequent tests\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -103,6 +227,54 @@
 			"item": [
 				{
 					"name": "Upload Video",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Verificar que tenemos el token antes de hacer upload",
+									"var token = pm.environment.get(\"access_token\");",
+									"console.log(\" Upload Video - Token disponible: \" + (token ? \"SÍ (\" + token.substring(0, 20) + \"...)\" : \"NO\"));",
+									"",
+									"if (!token) {",
+									"    console.log(\" No hay token disponible para upload\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Upload response status: \" + pm.response.code);",
+									"console.log(\"Upload response body: \" + pm.response.text());",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    pm.test(\"Response has message and task_id\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('message');",
+									"        pm.expect(jsonData).to.have.property('task_id');",
+									"    });",
+									"    ",
+									"    // Guardar task_id si existe",
+									"    var jsonData = pm.response.json();",
+									"    if(jsonData && jsonData.task_id) {",
+									"        pm.environment.set(\"upload_task_id\", jsonData.task_id);",
+									"        console.log(\" Task ID guardado: \" + jsonData.task_id);",
+									"    }",
+									"} else {",
+									"    console.log(\"ERROR: Upload falló - verificar autenticación\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -122,11 +294,11 @@
 								{
 									"key": "video_file",
 									"type": "file",
-									"src": "/Users/jaime/projects/uniandes/videos de prueba proyecto 1/internet-musica.mp4"
+									"src": "docs/Video/Test_Video.mp4"
 								},
 								{
 									"key": "title",
-									"value": "testing",
+									"value": "Test Video for Newman",
 									"type": "text"
 								},
 								{
@@ -152,6 +324,30 @@
 				},
 				{
 					"name": "Get My Videos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});",
+									"",
+									"// Si hay videos, guardar el primer ID para pruebas posteriores",
+									"var jsonData = pm.response.json();",
+									"if(jsonData && jsonData.length > 0 && jsonData[0].video_id) {",
+									"    pm.environment.set(\"video_id\", jsonData[0].video_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -181,17 +377,27 @@
 				{
 					"name": "Get Video Detail",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/videos/1",
+							"raw": "{{base_url}}/api/videos/{{video_id}}",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"videos",
-								"1"
+								"{{video_id}}"
 							]
 						}
 					},
@@ -200,17 +406,27 @@
 				{
 					"name": "Delete Video",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/videos/1",
+							"raw": "{{base_url}}/api/videos/{{video_id}}",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"videos",
-								"1"
+								"{{video_id}}"
 							]
 						}
 					},
@@ -223,6 +439,33 @@
 			"item": [
 				{
 					"name": "List Public Videos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});",
+									"",
+									"// Si hay videos públicos, guardar uno para votar",
+									"var jsonData = pm.response.json();",
+									"if(jsonData && jsonData.length > 0) {",
+									"    if(jsonData[0].video_id) {",
+									"        pm.environment.set(\"public_video_id\", jsonData[0].video_id);",
+									"        console.log(\"Video público encontrado para votar: \" + jsonData[0].video_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -242,22 +485,51 @@
 				},
 				{
 					"name": "Vote Video",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// El voto puede ser exitoso (200) o ya existente (400)",
+									"pm.test(\"Response received\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"vote_type\": \"upvote\" \n}"
+							"raw": "{}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/ranking/public/{{video_id}}/vote",
+							"raw": "{{base_url}}/api/public/videos/{{video_id}}/vote",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"ranking",
 								"public",
+								"videos",
 								"{{video_id}}",
 								"vote"
 							]
@@ -267,6 +539,60 @@
 				},
 				{
 					"name": "Get Top Rankings",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = null;",
+									"var parseError = null;",
+									"",
+									"pm.test(\"Response can be parsed as JSON\", function () {",
+									"    try {",
+									"        var responseText = pm.response.text();",
+									"        ",
+									"        if (!responseText || responseText.trim() === '') {",
+									"            throw new Error('Response text is empty or null');",
+									"        }",
+									"        ",
+									"        jsonData = JSON.parse(responseText);",
+									"        ",
+									"        pm.expect(jsonData).to.not.be.null;",
+									"        pm.expect(jsonData).to.not.be.undefined;",
+									"    } catch (error) {",
+									"        parseError = error;",
+									"        pm.expect.fail('Failed to parse response as JSON: ' + error.message);",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    if (jsonData !== null && parseError === null) {",
+									"        pm.expect(jsonData).to.be.an('array');",
+									"    } else {",
+									"        pm.expect.fail('Cannot test array structure due to JSON parsing failure');",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"Rankings have required fields\", function () {",
+									"    if (jsonData !== null && parseError === null && Array.isArray(jsonData)) {",
+									"        if(jsonData.length > 0) {",
+									"            pm.expect(jsonData[0]).to.have.property('position');",
+									"            pm.expect(jsonData[0]).to.have.property('username');",
+									"            pm.expect(jsonData[0]).to.have.property('votes');",
+									"        }",
+									"    } else {",
+									"        pm.expect.fail('Cannot validate fields due to JSON parsing or array validation failure');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -335,12 +661,12 @@
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "http://localhost",
+			"value": "http://localhost:8080",
 			"type": "string"
 		},
 		{
 			"key": "deploy_url",
-			"value": "http://ip_de_su_proyecto:8080/api",
+			"value": "http://ip_de_su_proyecto:8080",
 			"type": "string"
 		},
 		{

@@ -82,13 +82,35 @@ func RemoveAudio(src, dst string) error {
 
 // ConvertTo720p convierte video a 1280x720 manteniendo aspect ratio
 func ConvertTo720p(src, dst string) error {
-	args := []string{"-i", src, "-vf", "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-y", dst}
+	args := []string{
+		"-i", src,
+		"-vf", "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
+		"-c:v", "libx264",
+		"-preset", "ultrafast", // Cambiado de "fast" a "ultrafast" para máxima velocidad
+		"-crf", "28", // Cambiado de "23" a "28" para reducir calidad pero ganar velocidad
+		"-threads", "0", // Usar todos los cores disponibles
+		"-tune", "fastdecode", // Optimizar para decodificación rápida
+		"-movflags", "+faststart", // Optimizar para streaming
+		"-an", // Sin audio
+		"-y", dst,
+	}
 	return runCmd("ffmpeg", args...)
 }
 
 // AddWatermark overlay watermarkImage at top-right with 10px padding
 func AddWatermark(src, dst, watermarkImage string) error {
-	args := []string{"-i", src, "-i", watermarkImage, "-filter_complex", "overlay=main_w-overlay_w-10:10", "-codec:a", "copy", "-y", dst}
+	args := []string{
+		"-i", src,
+		"-i", watermarkImage,
+		"-filter_complex", "overlay=main_w-overlay_w-10:10",
+		"-c:v", "libx264",
+		"-preset", "ultrafast", // Preset más rápido
+		"-crf", "28", // Calidad equilibrada para velocidad
+		"-threads", "0", // Usar todos los cores
+		"-movflags", "+faststart", // Optimizar para streaming
+		"-an", // Sin audio
+		"-y", dst,
+	}
 	return runCmd("ffmpeg", args...)
 }
 
@@ -115,10 +137,36 @@ func AddOpeningClosing(src, dst, opening, closing string) error {
 
 	// concat demuxer
 	if err := runCmd("ffmpeg", "-f", "concat", "-safe", "0", "-i", tmpList, "-c", "copy", "-y", dst); err != nil {
-		// As fallback, try re-encoding (safer)
+		// As fallback, try re-encoding
 		return runCmd("ffmpeg", "-f", "concat", "-safe", "0", "-i", tmpList, "-c:v", "libx264", "-c:a", "aac", "-y", dst)
 	}
 	return nil
+}
+
+// OptimizedConvertAndWatermark combina conversión y watermark en un solo paso FFmpeg
+func OptimizedConvertAndWatermark(src, dst, watermarkImage string) error {
+	// Si no hay watermark, solo convertir
+	if !FileExists(watermarkImage) {
+		return ConvertTo720p(src, dst)
+	}
+
+	// Combinar conversión y watermark en un solo paso para máxima eficiencia
+	args := []string{
+		"-i", src,
+		"-i", watermarkImage,
+		"-filter_complex",
+		"[0:v]scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2[scaled];[scaled][1:v]overlay=main_w-overlay_w-10:10[out]",
+		"-map", "[out]",
+		"-c:v", "libx264",
+		"-preset", "ultrafast", // Preset más rápido
+		"-crf", "28", // Calidad equilibrada
+		"-threads", "0", // Usar todos los cores disponibles
+		"-tune", "fastdecode", // Optimizar para decodificación rápida
+		"-movflags", "+faststart", // Optimizar para streaming
+		"-an", // Sin audio
+		"-y", dst,
+	}
+	return runCmd("ffmpeg", args...)
 }
 
 // FileExists verifica si un archivo existe

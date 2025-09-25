@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     city VARCHAR(100) NOT NULL,
     country VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP -- DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índices para optimizar consultas

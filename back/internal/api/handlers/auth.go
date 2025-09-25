@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
-	"time"
 
 	"back/internal/config"
 	"back/internal/database/models"
@@ -87,8 +86,8 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		PasswordHash: hashedPassword,
 		City:         req.City,
 		Country:      req.Country,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		//CreatedAt:    time.Now(), fecha tomada por BD
+		//UpdatedAt:    time.Now(),
 	}
 
 	if err := h.authService.CreateUser(user); err != nil {
@@ -176,4 +175,12 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// Logout maneja el cierre de sesión
+func (h *AuthHandler) Logout(c *gin.Context) {
+
+	c.JSON(http.StatusOK, models.APIResponse{
+		Message: "Logged out successfully",
+	})
 }

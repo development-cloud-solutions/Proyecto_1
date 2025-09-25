@@ -8,6 +8,12 @@ RUN npm run build
 
 FROM nginx:alpine
 
+# Instalar tzdata para configurar zona horaria
+RUN apk --no-cache add tzdata
+
+# Establecer zona horaria
+ENV TZ=America/Bogota
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
