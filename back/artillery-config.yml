@@ -39,7 +39,7 @@ config:
       - 'city'
   variables:
     test_password: "StrongPass123"
-  processor: "./processor.js"
+  processor: "processor.js"
     
 
 scenarios:

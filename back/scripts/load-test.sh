@@ -4,7 +4,7 @@ set -e
 
 # Configurar signal handlers para limpieza en caso de interrupción
 cleanup() {
-    echo -e "\n${YELLOW}🚨 Señal de interrupción recibida. Limpiando procesos...${NC}"
+    echo -e "\n${YELLOW} Señal de interrupción recibida. Limpiando procesos...${NC}"
 
     # Matar procesos Artillery
     pkill -f "artillery" 2>/dev/null || true
@@ -18,7 +18,7 @@ cleanup() {
         rm -f "$TEMP_PARSER"
     fi
 
-    echo -e "${GREEN}✅ Limpieza completada${NC}"
+    echo -e "${GREEN} Limpieza completada${NC}"
     exit 130
 }
 
@@ -56,7 +56,8 @@ fi
 REPORTS_DIR="$PROJECT_ROOT/load-test-reports"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-echo -e "${BLUE}🚀 ANB Rising Stars - Plan de Pruebas de Carga${NC}"
+echo
+echo -e "${BLUE}  ANB Rising Stars - Plan de Pruebas de Carga${NC}"
 echo -e "${BLUE}================================================${NC}"
 echo -e " Directorio del proyecto: $PROJECT_ROOT"
 echo -e " Directorio de backend: $BACK_DIR" 
@@ -67,7 +68,7 @@ echo ""
 mkdir -p "$REPORTS_DIR"
 
 # Verificar que Artillery está instalado
-echo -e "${YELLOW}🔧 Verificando dependencias...${NC}"
+echo -e "${YELLOW}  Verificando dependencias...${NC}"
 if ! command -v artillery &> /dev/null; then
     echo -e "${YELLOW} Instalando Artillery...${NC}"
     npm install artillery
@@ -79,7 +80,7 @@ if [ ! -d "node_modules/form-data" ]; then
     npm install form-data
 fi
 
-# Verificar Node.js para parsing de JSON (alternativa más confiable que jq en Windows)
+# Verificar Node.js para parsing de JSON 
 if ! command -v node &> /dev/null; then
     echo -e "${RED} Node.js no está disponible${NC}"
     echo -e "${RED} Node.js es requerido para el análisis de resultados${NC}"
@@ -91,7 +92,7 @@ fi
 
 # Verificar que no haya procesos Artillery previos colgados
 if pgrep -f "artillery" > /dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  Detectados procesos Artillery previos. Limpiando...${NC}"
+    echo -e "${YELLOW}   Detectados procesos Artillery previos. Limpiando...${NC}"
     pkill -f "artillery" 2>/dev/null || true
     sleep 2
 fi
@@ -130,7 +131,7 @@ if [ ! -f "artillery-config.yml" ]; then
     exit 1
 fi
 
-if [ ! -f "load-test-data.csv" ]; then
+if [ ! -f "scripts/load-test-data.csv" ]; then
     echo -e "${RED}  Archivo load-test-data.csv no encontrado${NC}"
     exit 1
 fi
