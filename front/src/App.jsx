@@ -168,10 +168,10 @@ const UploadVideo = ({
             {!processingStatus && (
               <div
                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${dragActive
-                    ? 'border-orange-500 bg-orange-50'
-                    : selectedFile
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50'
+                  ? 'border-orange-500 bg-orange-50'
+                  : selectedFile
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50'
                   }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -387,7 +387,6 @@ const UploadVideoView = ({
       }, 3000);
     } catch (err) {
       clearInterval(interval);
-      console.error('Upload error details:', err);
       setUploadError(`Error al subir el video: ${err.message || 'Error desconocido'}`);
       setUploading(false);
       setProcessingStatus(null);
@@ -404,10 +403,6 @@ const UploadVideoView = ({
           <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
             <h3 className="text-2xl font-bold mb-2">Requisitos del Video</h3>
             <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-start space-x-2">
-                <CheckCircle size={16} className="mt-0.5 flex-shrink-0" />
-                <span>Duración máxima: 30 segundos</span>
-              </div>
               <div className="flex items-start space-x-2">
                 <CheckCircle size={16} className="mt-0.5 flex-shrink-0" />
                 <span>Formato: MP4, MOV, AVI</span>
@@ -730,7 +725,6 @@ class ApiService {
       // Handle null responses from empty collections
       return data === null ? [] : data;
     } catch (error) {
-      console.error('API request failed:', error);
       throw error;
     }
   }
@@ -877,7 +871,6 @@ const App = () => {
           setUser(profile);
           setCurrentView('dashboard');
         } catch (error) {
-          console.error('Auth check failed:', error);
           apiService.logout();
         }
       }
@@ -895,7 +888,6 @@ const App = () => {
             const publicVideos = await apiService.getPublicVideos();
             setVideos(Array.isArray(publicVideos) ? publicVideos : (publicVideos ? [publicVideos] : []));
           } catch (error) {
-            console.warn('Failed to load public videos:', error);
             setVideos([]);
           }
         }
@@ -905,7 +897,6 @@ const App = () => {
             const topRankings = await apiService.getTopRankings(50, selectedCity);
             setRankings(Array.isArray(topRankings) ? topRankings : (topRankings ? [topRankings] : []));
           } catch (error) {
-            console.warn('Failed to load rankings:', error);
             setRankings([]);
           }
         }
@@ -915,7 +906,6 @@ const App = () => {
             const userVideos = await apiService.getMyVideos();
             setMyVideos(Array.isArray(userVideos) ? userVideos : (userVideos ? [userVideos] : []));
           } catch (error) {
-            console.warn('Failed to load user videos:', error);
             setMyVideos([]);
           }
         }
@@ -926,12 +916,10 @@ const App = () => {
             const userVotes = await apiService.getUserVotes();
             setVotedVideos(new Set(Array.isArray(userVotes) ? userVotes : []));
           } catch (error) {
-            console.warn('Failed to load user votes:', error);
             setVotedVideos(new Set());
           }
         }
       } catch (error) {
-        console.error('Failed to load data:', error);
         setVideos([]);
         setRankings([]);
         setMyVideos([]);
@@ -1348,8 +1336,8 @@ const App = () => {
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-lg font-semibold truncate">{video.title}</h4>
                           <span className={`px-3 py-1 rounded-full text-xs font-bold ${video.status === 'processed' ? 'bg-green-500' :
-                              video.status === 'processing' ? 'bg-yellow-500' :
-                                video.status === 'uploaded' ? 'bg-blue-500' : 'bg-red-500'
+                            video.status === 'processing' ? 'bg-yellow-500' :
+                              video.status === 'uploaded' ? 'bg-blue-500' : 'bg-red-500'
                             }`}>
                             {video.status === 'processed' ? 'COMPLETADO' :
                               video.status === 'processing' ? 'PROCESANDO' :
@@ -1480,15 +1468,25 @@ const App = () => {
 
     // Filtrar videos cuando cambie la ciudad seleccionada o los videos
     useEffect(() => {
+      // Primero filtrar para mostrar solo videos públicos de otros usuarios
+      const publicVideosFromOthers = videos.filter(video => {
+        const isPublic = video.is_public === true || video.is_public === 'true';
+        // Si no hay usuario autenticado, mostrar todos los videos públicos
+        // Si hay usuario, solo mostrar videos de otros usuarios
+        const isOtherUser = user ? video.user_id !== user.id : true;
+        return isPublic && isOtherUser;
+      });
+
+      // Luego aplicar filtro por ciudad
       if (selectedCityFilter === 'todas') {
-        setFilteredVideos(videos);
+        setFilteredVideos(publicVideosFromOthers);
       } else {
-        const filtered = videos.filter(video =>
+        const filtered = publicVideosFromOthers.filter(video =>
           video.user_city && video.user_city.toLowerCase() === selectedCityFilter.toLowerCase()
         );
         setFilteredVideos(filtered);
       }
-    }, [selectedCityFilter, videos]);
+    }, [selectedCityFilter, videos, user?.id]);
 
     return (
       <div className="min-h-screen bg-gray-50 p-4">
@@ -1506,8 +1504,8 @@ const App = () => {
                 key={city}
                 onClick={() => setSelectedCityFilter(city.toLowerCase())}
                 className={`px-5 py-2 rounded-full font-semibold transition-all ${selectedCityFilter === city.toLowerCase()
-                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                    : 'bg-white text-gray-700 hover:bg-orange-50 shadow'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-orange-50 shadow'
                   }`}
               >
                 {city}
@@ -1538,7 +1536,7 @@ const App = () => {
             <div className="text-center py-12">
               <Video className="w-16 h-16 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                No hay videos en {cities.find(c => c.toLowerCase() === selectedCityFilter)}
+                No hay videos Disponibles para  "{cities.find(c => c.toLowerCase() === selectedCityFilter)}"
               </h3>
               <p className="text-gray-500">Intenta seleccionar otra ciudad o ver todos los videos</p>
             </div>
@@ -1557,7 +1555,51 @@ const App = () => {
   };
 
   // Rankings mejorado
-  const Rankings = () => (
+  const Rankings = () => {
+    const [selectedVideo, setSelectedVideo] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const openVideoModal = (player) => {
+
+      // Detectar el campo correcto para la URL del video
+      let videoUrl = null;
+
+      // Buscar URL en diferentes campos posibles
+      if (player.processed_url) {
+        videoUrl = player.processed_url;
+      } else if (player.video_url) {
+        videoUrl = player.video_url;
+      } else if (player.url) {
+        videoUrl = player.url;
+      } else if (player.video_id) {
+        videoUrl = `/api/videos/${player.video_id}/stream`;
+      } else {
+        videoUrl = `/videos/placeholder.mp4`; // Fallback placeholder
+      }
+
+      // Crear objeto video compatible con el modal
+      const videoForModal = {
+        title: player.title || player.video_title || 'Video sin título',
+        username: player.username || `${player.first_name || ''} ${player.last_name || ''}`.trim(),
+        city: player.city,
+        votes: player.votes,
+        status: 'processed', // Asumimos que están procesados si están en ranking
+        processed_url: videoUrl,
+        video_id: player.video_id,
+        position: rankings.findIndex(r => r.video_id === player.video_id) + 1,
+        is_public: true // Los videos en ranking son públicos
+      };
+
+      setSelectedVideo(videoForModal);
+      setIsModalOpen(true);
+    };
+
+    const closeVideoModal = () => {
+      setIsModalOpen(false);
+      setSelectedVideo(null);
+    };
+
+    return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
@@ -1571,8 +1613,8 @@ const App = () => {
               key={city}
               onClick={() => setSelectedCity(city.toLowerCase())}
               className={`px-5 py-2 rounded-full font-semibold transition-all ${selectedCity === city.toLowerCase()
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                  : 'bg-white text-gray-700 hover:bg-orange-50 shadow'
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-orange-50 shadow'
                 }`}
             >
               {city}
@@ -1622,7 +1664,10 @@ const App = () => {
                         <div className="text-sm text-gray-500">votos</div>
                       </div>
 
-                      <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all">
+                      <button
+                        onClick={() => openVideoModal(player)}
+                        className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+                      >
                         Ver Video
                       </button>
                     </div>
@@ -1673,8 +1718,16 @@ const App = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal para reproducir videos */}
+      <VideoModal
+        isOpen={isModalOpen}
+        onClose={closeVideoModal}
+        video={selectedVideo}
+      />
     </div>
-  );
+    );
+  };
 
   // Perfil 
   const Profile = () => (
@@ -1737,30 +1790,9 @@ const App = () => {
                   Mis Videos de Competencia
                 </h3>
                 {myVideos.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {myVideos.map(video => (
-                      <div key={video.video_id} className="bg-gray-50 rounded-xl p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-semibold text-gray-800">{video.title}</h4>
-                            <p className="text-sm text-gray-600">
-                              Subido: {new Date(video.uploaded_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${video.status === 'processed' ? 'bg-green-100 text-green-800' :
-                                video.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                                  video.status === 'uploaded' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-red-100 text-red-800'
-                              }`}>
-                              {video.status === 'processed' ? 'Procesado' :
-                                video.status === 'processing' ? 'Procesando' :
-                                  video.status === 'uploaded' ? 'Subido' : 'Error'}
-                            </span>
-                            <span className="text-sm font-bold text-gray-700">{video.votes || 0} votos</span>
-                          </div>
-                        </div>
-                      </div>
+                      <MyVideoCard key={video.video_id} video={video} />
                     ))}
                   </div>
                 ) : (
@@ -1785,6 +1817,250 @@ const App = () => {
       </div>
     </div>
   );
+
+  // Componente Modal para reproducir videos
+  const VideoModal = ({ isOpen, onClose, video }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [videoError, setVideoError] = useState('');
+
+    // Reset estado cuando cambia el video o se abre/cierra modal
+    useEffect(() => {
+      if (isOpen) {
+        setIsPlaying(false);
+        setVideoError('');
+      }
+    }, [isOpen, video]);
+
+    // Cerrar modal con tecla Escape
+    useEffect(() => {
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+
+      if (isOpen) {
+        document.addEventListener('keydown', handleEscape);
+        document.body.style.overflow = 'hidden';
+      }
+
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+        document.body.style.overflow = 'unset';
+      };
+    }, [isOpen, onClose]);
+
+    if (!isOpen || !video) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div className="relative w-full max-w-4xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header del modal */}
+          <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold">{video.title}</h3>
+                <p className="text-orange-100 text-sm">
+                  {video.username} • {video.city} • {video.votes || 0} votos
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="bg-white/20 hover:bg-white/30 rounded-full p-2 transition-colors"
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+          </div>
+
+          {/* Contenido del video */}
+          <div className="p-6">
+            <div className="relative bg-black rounded-xl overflow-hidden mb-4" style={{ aspectRatio: '16/9' }}>
+              {video.status === 'processed' && video.processed_url ? (
+                isPlaying ? (
+                  <video
+                    className="w-full h-full object-cover"
+                    controls
+                    autoPlay
+                    onEnded={() => setIsPlaying(false)}
+                    onError={(e) => {
+                      setVideoError('Error al cargar el video');
+                    }}
+                    onLoadStart={() => {
+                      setVideoError('');
+                    }}
+                    onCanPlay={() => {
+                    }}
+                    onLoadedData={() => {
+                    }}
+                  >
+                    <source src={`${BASE_URL}${video.processed_url}`} type="video/mp4" />
+                    Tu navegador no soporta el elemento de video.
+                  </video>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <button
+                      onClick={() => setIsPlaying(true)}
+                      className="bg-white/90 backdrop-blur text-gray-900 px-8 py-4 rounded-full font-semibold transform hover:scale-110 transition-all shadow-lg flex items-center"
+                    >
+                      <Play className="mr-3" size={24} />
+                      Reproducir Video
+                    </button>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full text-white">
+                  <div className="text-center">
+                    {video.status === 'processing' ? (
+                      <>
+                        <Loader2 className="w-12 h-12 mx-auto animate-spin mb-4" />
+                        <p>Video en procesamiento...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Video no disponible</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mensaje de error */}
+            {videoError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-4">
+                {videoError}
+              </div>
+            )}
+
+            {/* Información adicional */}
+            <div className="grid md:grid-cols-3 gap-4 text-center">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-orange-600">{video.votes || 0}</div>
+                <div className="text-sm text-gray-600">Votos</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-blue-600">#{video.position || '-'}</div>
+                <div className="text-sm text-gray-600">Ranking</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-lg font-bold text-gray-700">{video.city}</div>
+                <div className="text-sm text-gray-600">Ciudad</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Componente de tarjeta de video para videos propios
+  const MyVideoCard = ({ video }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [videoError, setVideoError] = useState('');
+
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300">
+        <div className="relative h-48 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+          {video.status === 'processed' && video.processed_url ? (
+            isPlaying ? (
+              <video
+                className="w-full h-full object-cover"
+                controls
+                autoPlay
+                onEnded={() => setIsPlaying(false)}
+                onError={() => setVideoError('Error al cargar el video')}
+              >
+                <source src={`${BASE_URL}${video.processed_url}`} type="video/mp4" />
+                Tu navegador no soporta el elemento de video.
+              </video>
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-black/30"></div>
+                <button
+                  onClick={() => setIsPlaying(true)}
+                  className="relative z-10 bg-white/90 backdrop-blur text-gray-900 px-6 py-3 rounded-full font-semibold transform hover:scale-110 transition-all shadow-lg"
+                >
+                  <Play className="inline mr-2" size={20} />
+                  Reproducir Video
+                </button>
+              </>
+            )
+          ) : video.status === 'processing' ? (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 text-white animate-spin mx-auto mb-2" />
+                <span className="text-white text-sm">Procesando...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-white">
+              <Video className="w-12 h-12 mx-auto opacity-50 mb-2" />
+              <p className="text-sm opacity-75">Video no disponible</p>
+            </div>
+          )}
+
+          <div className="absolute top-2 right-2 flex space-x-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${video.status === 'processed' ? 'bg-green-500 text-white' :
+              video.status === 'processing' ? 'bg-yellow-500 text-white' :
+                video.status === 'uploaded' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'
+              }`}>
+              {video.status === 'processed' ? 'COMPLETADO' :
+                video.status === 'processing' ? 'PROCESANDO' :
+                  video.status === 'uploaded' ? 'SUBIDO' : 'ERROR'}
+            </span>
+            {video.is_public && (
+              <span className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                PÚBLICO
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4">
+          <h4 className="font-bold text-lg text-gray-800 mb-2 truncate">{video.title}</h4>
+
+          {videoError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg mb-3">
+              {videoError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div>
+              <p className="text-gray-500">Votos recibidos:</p>
+              <p className="text-2xl font-bold text-orange-600">{video.votes || 0}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">Fecha de subida:</p>
+              <p className="font-semibold text-gray-700">
+                {new Date(video.uploaded_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            <div className="flex items-center space-x-2">
+              <span className={`w-3 h-3 rounded-full ${video.status === 'processed' ? 'bg-green-500' :
+                video.status === 'processing' ? 'bg-yellow-500 animate-pulse' :
+                  'bg-red-500'
+                }`}></span>
+              <span className="text-sm text-gray-600">
+                {video.status === 'processed' ?
+                  (video.is_public ? 'Listo para votar' : 'Privado') :
+                  video.status === 'processing' ? 'En proceso...' : 'Error en procesamiento'}
+              </span>
+            </div>
+
+            <div className="text-sm text-gray-500">
+              {video.is_public ? 'Visible públicamente' : 'Solo en perfil'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Componente de tarjeta de video
   const VideoCard = ({ video, detailed = false }) => {
@@ -1826,7 +2102,6 @@ const App = () => {
         const result = await apiService.voteVideo(video.video_id);
 
       } catch (error) {
-        console.error('Vote failed:', error);
 
         setVoted(false);
         const newVotedSet = new Set(votedVideos);
@@ -1859,7 +2134,7 @@ const App = () => {
                 autoPlay
                 onEnded={() => setIsPlaying(false)}
               >
-                <source src={`http://localhost${video.processed_url}`} type="video/mp4" />
+                <source src={`${BASE_URL}${video.processed_url}`} type="video/mp4" />
                 Tu navegador no soporta el elemento de video.
               </video>
             ) : (
@@ -1887,7 +2162,7 @@ const App = () => {
             </div>
           )}
 
-          <div className="absolute top-2 right-2 bg-black/50 backdrop-blur text-white px-2 py-1 rounded-full text-xs">
+          <div className="absolute top-2 left-2 bg-black/50 backdrop-blur text-white px-2 py-1 rounded-full text-xs">
             <Eye className="inline mr-1" size={12} />
             {Math.floor(Math.random() * 5000 + 1000)}
           </div>
@@ -1918,14 +2193,14 @@ const App = () => {
                 onClick={handleVote}
                 disabled={voted || isVoting || video.status !== 'processed' || !user}
                 className={`px-4 py-2 rounded-full font-semibold transition-all transform ${voted
-                    ? 'bg-green-500 text-white'
-                    : isVoting
-                      ? 'bg-orange-300 text-white cursor-not-allowed'
-                      : video.status === 'processing'
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : !user
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:scale-105'
+                  ? 'bg-green-500 text-white'
+                  : isVoting
+                    ? 'bg-orange-300 text-white cursor-not-allowed'
+                    : video.status === 'processing'
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : !user
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:scale-105'
                   }`}
               >
                 {voted ? (

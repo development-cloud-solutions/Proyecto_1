@@ -1,5 +1,5 @@
 config:
-  target: 'http://localhost:8080'
+  target: 'http://localhost'
   http:
     timeout: 180
     pool: 40
@@ -31,7 +31,7 @@ config:
       arrivalRate: 10
       name: "Recovery"
   payload:
-    path: './load-test-data.csv'
+    path: './scripts/load-test-data.csv'
     fields:
       - 'email'
       - 'first_name'
@@ -39,7 +39,7 @@ config:
       - 'city'
   variables:
     test_password: "StrongPass123"
-  processor: "processor.js"
+  processor: "scripts/rocessor.js"
     
 
 scenarios:
@@ -124,7 +124,7 @@ scenarios:
             email: "{{ uniqueEmail }}"
             password1: "{{ test_password }}"
             password2: "{{ test_password }}"
-            city: "TestCity"
+            city: "Bogotá"
             country: "Colombia"
           expect:
             - statusCode: 201

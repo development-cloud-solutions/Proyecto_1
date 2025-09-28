@@ -35,6 +35,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: '0.3'     # Límite mínimo para PostgreSQL local
+#          memory: 256M    # 256MB para desarrollo local
+#        reservations:
+#          cpus: '0.1'     # 0.05 CPU mínimo
+#          memory: 128M    # 128MB mínimo
 
   redis:
     image: redis:7-alpine
@@ -52,6 +60,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'     # 20 de CPU para Redis
+          memory: 384M    # 384MB para Redis (20 de 2GB)
+        reservations:
+          cpus: '0.1'     # 0.05 CPU mínimo
+          memory: 128M    # 128MB mínimo
 
   api:
     # Usar el Dockerfile específico para la API
@@ -59,8 +75,8 @@ services:
       context: ./back
       dockerfile: Dockerfile.api
     container_name: anb_api
-    ports:
-      - "8080:8080"
+    # ports:
+    #   - "8080:8080"  # No exponer directamente, usar nginx
     env_file:
       - ./back/.env
     environment:
@@ -97,6 +113,14 @@ services:
     networks:
       - anb_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'     # 0.75 de CPU para API (en Web Server)
+          memory: 1536M   # 0.75 de RAM para API (1.5GB)
+        reservations:
+          cpus: '0.8'     # Garantizar 0.40 CPU mínimo
+          memory: 768M    # Garantizar 768MB mínimo
 
   # Worker 1 - Procesamiento principal con alta concurrencia
   worker1:
@@ -121,7 +145,7 @@ services:
       - ENVIRONMENT=development
       - UPLOAD_PATH=/app/uploads
       - PROCESSED_PATH=/app/processed
-      - WORKER_CONCURRENCY=12  # Concurrencia
+      - WORKER_CONCURRENCY=${WORKER1_CONCURRENCY:-4}   # Concurrencia
     volumes:
       - video_uploads:/app/uploads
       - video_processed:/app/processed
@@ -133,58 +157,86 @@ services:
     networks:
       - anb_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.8'     # 0.90 de CPU para worker principal
+          memory: 1600M   # 0.80 de RAM para worker principal (1.6GB)
+        reservations:
+          cpus: '1.0'     # Garantizar 0.50 CPU mínimo
+          memory: 1024M   # Garantizar 1GB mínimo
 
   # Worker 2 - Worker secundario para balanceo de carga
-  worker2:
-    build:
-      context: ./back
-      dockerfile: Dockerfile.worker
-    container_name: anb_worker_2
-    command: ./worker
-    env_file:
-      - ./back/.env
-    environment:
-      - TZ=America/Bogota
-      - DB_DRIVER=postgres
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=proyecto_1
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_SSL_MODE=disable
-      - REDIS_URL=redis:6379
-      - WORKER_MODE=true
-      - ENVIRONMENT=development
-      - UPLOAD_PATH=/app/uploads
-      - PROCESSED_PATH=/app/processed
-      - WORKER_CONCURRENCY=8   # Concurrencia 
-    volumes:
-      - video_uploads:/app/uploads
-      - video_processed:/app/processed
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - anb_network
-    restart: unless-stopped
+#  worker2:
+#    build:
+#      context: ./back
+#      dockerfile: Dockerfile.worker
+#    container_name: anb_worker_2
+#    command: ./worker
+#    env_file:
+#      - ./back/.env
+#    environment:
+#      - TZ=America/Bogota
+#      - DB_DRIVER=postgres
+#      - DB_HOST=postgres
+#      - DB_PORT=5432
+#      - DB_NAME=proyecto_1
+#      - DB_USER=postgres
+#      - DB_PASSWORD=password
+#      - DB_SSL_MODE=disable
+#      - REDIS_URL=redis:6379
+#      - WORKER_MODE=true
+#      - ENVIRONMENT=development
+#      - UPLOAD_PATH=/app/uploads
+#      - PROCESSED_PATH=/app/processed
+#      - WORKER_CONCURRENCY=${WORKER2_CONCURRENCY:-2}   # Concurrencia
+#    volumes:
+#      - video_uploads:/app/uploads
+#      - video_processed:/app/processed
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    networks:
+#      - anb_network
+#    restart: unless-stopped
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: '0.8'     # 0.40 de CPU para worker secundario
+#          memory: 512M    # 0.25 de RAM para worker secundario (512MB)
+#        reservations:
+#          cpus: '0.2'     # Garantizar 0.10 CPU mínimo
+#          memory: 256M    # Garantizar 256MB mínimo
 
   frontend:
     build:
       context: ./front
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost
+        - VITE_APP_NAME=ANB Rising Stars Showcase
+        - VITE_APP_VERSION=1.0.0
+        - VITE_ENVIRONMENT=development
     container_name: anb_frontend
-    ports:
-      - "3000:80"
+    #ports:
+    #  - "3000:80"  # Puerto temporal para testing
     environment:
-      - VITE_API_URL=http://localhost:8080
       - TZ=America/Bogota
     depends_on:
       - api
     networks:
       - anb_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'     # 0.15 de CPU para frontend
+          memory: 2048M    # 2GB para frontend
+        reservations:
+          cpus: '0.1'     # 0.05 CPU mínimo
+          memory: 128M    # 128MB mínimo
   
   nginx:
     image: nginx:alpine
@@ -205,6 +257,14 @@ services:
     networks:
       - anb_network
     restart: unless-stopped
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: '0.2'     # 0.10 de CPU para nginx
+#          memory: 256M    # 256MB para nginx (0.125 de 2GB)
+#        reservations:
+#          cpus: '0.1'     # 0.05 CPU mínimo
+#          memory: 64M     # 64MB mínimo
 
 volumes:
   postgres_data:

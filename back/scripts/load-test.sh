@@ -2,6 +2,13 @@
 
 set -e
 
+# Colores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
 # Configurar signal handlers para limpieza en caso de interrupción
 cleanup() {
     echo -e "\n${YELLOW} Señal de interrupción recibida. Limpiando procesos...${NC}"
@@ -22,9 +29,6 @@ cleanup() {
     exit 130
 }
 
-# Registrar signal handlers
-trap cleanup SIGINT SIGTERM
-
 # Verificar que estamos usando bash
 if [ -z "$BASH_VERSION" ]; then
     echo "Error: Este script requiere bash, no sh"
@@ -32,12 +36,9 @@ if [ -z "$BASH_VERSION" ]; then
     exit 1
 fi
 
-# Colores para output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Registrar signal handlers
+trap cleanup SIGINT SIGTERM
+
 
 # Configuración
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -101,9 +102,10 @@ fi
 echo -e "${YELLOW} Verificando que la API esté disponible...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
+PORT=80
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+    if curl -f http://localhost:${PORT}/health > /dev/null 2>&1; then
         echo -e "${GREEN}  API está disponible${NC}"
         break
     fi
@@ -111,7 +113,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo -e "${RED}  API no está disponible después de $MAX_RETRIES intentos${NC}"
-        echo -e "${RED}  Verifique que la aplicación esté ejecutándose en el puerto 8080${NC}"
+        echo -e "${RED}  Verifique que la aplicación esté ejecutándose en el puerto ${PORT} ${NC}"
         echo -e "${RED}  Puede iniciar la aplicación con: docker-compose up -d${NC}"
         exit 1
     fi

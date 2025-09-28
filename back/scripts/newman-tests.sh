@@ -61,9 +61,10 @@ echo ""
 
 MAX_RETRIES=30
 RETRY_COUNT=0
+PORT=80
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+    if curl -f http://localhost:${PORT}/health > /dev/null 2>&1; then
         echo -e "${GREEN} API está disponible ${NC}"
         break
     fi
@@ -71,7 +72,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo " API no está disponible después de $MAX_RETRIES intentos"
-        echo " Verifique que la aplicación esté ejecutándose en el puerto 8080"
+        echo " Verifique que la aplicación esté ejecutándose en el puerto ${PORT}"
         echo " Puede iniciar la aplicación con: docker-compose up -d"
         exit 1
     fi

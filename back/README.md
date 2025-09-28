@@ -2,7 +2,7 @@
 
 Backend del sistema de procesamiento de videos construido con Go, Gin, PostgreSQL y Redis.
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 - **Framework**: Gin (Go)
 - **Base de datos**: PostgreSQL
@@ -11,7 +11,7 @@ Backend del sistema de procesamiento de videos construido con Go, Gin, PostgreSQ
 - **Autenticación**: JWT
 - **Almacenamiento**: Sistema de archivos local
 
-## 📁 Estructura del proyecto
+## Estructura del proyecto
 
 ```
 back/
@@ -38,7 +38,7 @@ back/
 └── .env.example          # Variables de entorno de ejemplo
 ```
 
-## 🚀 Inicio rápido
+## Inicio rápido
 
 ### Prerrequisitos
 

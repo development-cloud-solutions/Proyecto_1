@@ -154,7 +154,21 @@ docker compose -f docker-compose.local.yml up -d
 
 4. Una vez iniciado y culminado el despliegue, se presentara una salida similar a la siguiente:
 ```bash
-
+[+] Running 14/14
+ ✔ proyecto_1-api                     Built                   0.0s 
+ ✔ proyecto_1-frontend                Built                   0.0s 
+ ✔ proyecto_1-worker1                 Built                   0.0s 
+ ✔ Network proyecto_1_anb_network     Created                 0.5s 
+ ✔ Volume proyecto_1_postgres_data    Created                 0.3s 
+ ✔ Volume proyecto_1_redis_data       Created                 0.1s 
+ ✔ Volume proyecto_1_video_uploads    Created                 0.1s 
+ ✔ Volume proyecto_1_video_processed  Created                 0.1s 
+ ✔ Container anb_redis                Healthy                15.1s 
+ ✔ Container anb_postgres             Healthy                26.1s 
+ ✔ Container anb_worker_1             Started                25.7s 
+ ✔ Container anb_api                  Started                26.1s 
+ ✔ Container anb_frontend             Started                27.2s 
+ ✔ Container anb_nginx                Started                31.0s
 ```
 
 5. Con los servicios iniciados, proceda a ingresar a la aplicación web mediante la URL: http://localhost:3000/

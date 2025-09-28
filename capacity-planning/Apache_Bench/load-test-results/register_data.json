@@ -2,8 +2,8 @@
   "first_name": "Test",
   "last_name": "User",
   "email": "test.user.$(date +%s)@example.com",
-  "password1": "TestPass123!",
-  "password2": "TestPass123!",
-  "city": "TestCity",
-  "country": "TestCountry"
+  "password1": "StrongPass123",
+  "password2": "StrongPass123",
+  "city": "Bogotá",
+  "country": "Colombia"
 }
