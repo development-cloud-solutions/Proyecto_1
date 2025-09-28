@@ -14,8 +14,8 @@ Proyecto_1/
 ├── .gitignore
 ├── back/
 │   ├── .dockerignore
-│   ├── .env
 │   ├── .env.example
+│   ├── artillery-config.yml
 │   ├── assets/
 │   │   ├── anb_watermark.png
 │   ├── cmd/
@@ -58,13 +58,36 @@ Proyecto_1/
 │   │   │   ├── video_processor.go
 │   ├── nginx/
 │   │   ├── nginx.conf
-│   ├── processed/
+│   ├── README.md
 │   ├── scripts/
+│   │   ├── generate-report.js
+│   │   ├── load-test-data.csv
 │   │   ├── load-test.sh
 │   │   ├── newman-tests.sh
-│   ├── uploads/
+│   │   ├── processor.js
+│   │   ├── README.md
+│   │   ├── view-results.sh
 ├── capacity-planning/
-│   ├── 
+│   ├── Apache_Bench/
+│   │   ├── ab_tests.sh
+│   │   ├── load-test-results/
+│   │   │   ├── Get_Profile_results.txt
+│   │   │   ├── Get_Videos_results.txt
+│   │   │   ├── health_100_users.txt
+│   │   │   ├── health_10_users.txt
+│   │   │   ├── health_200_users.txt
+│   │   │   ├── health_50_users.txt
+│   │   │   ├── Health_Check_results.txt
+│   │   │   ├── login_data.json
+│   │   │   ├── README.md
+│   │   │   ├── register_data.json
+│   │   │   ├── upload_data.txt
+│   │   │   ├── User_Login_results.txt
+│   │   │   ├── User_Registration_results.txt
+│   ├── jmeter/
+│   │   ├── anb_rising_stars_test.jmx
+│   ├── README.md
+├── CLAUDE.md
 ├── collections/
 │   ├── anb.json
 │   ├── postman_environment.json
@@ -86,13 +109,22 @@ Proyecto_1/
 ├── docker-compose.yml
 ├── docs/
 │   ├── Entrega_1/
+│   │   ├── ISIS4426_Entrega_1_Plan_Pruebas_Carga.pdf
 │   │   ├── ISIS4426_Entrega_1_Req.pdf
+│   ├── Entrega_2/
+│   │   ├── ISIS4426_Entrega_2_Req.pdf
 │   ├── Video/
+│   │   ├── README.md
 │   │   ├── Test_Video.mp4
 ├── front/
-│   ├── .env
 │   ├── .env.example
 │   ├── .gitignore
+│   ├── dist/
+│   │   ├── assets/
+│   │   │   ├── index-7KedNVM0.css
+│   │   │   ├── index-DrXsQoys.js
+│   │   ├── index.html
+│   │   ├── vite.svg
 │   ├── Dockerfile
 │   ├── eslint.config.js
 │   ├── index.html
@@ -105,7 +137,6 @@ Proyecto_1/
 │   ├── README.md
 │   ├── src/
 │   │   ├── App.jsx
-│   │   ├── App_backup.jsx
 │   │   ├── index.css
 │   │   ├── main.jsx
 │   │   ├── services/
@@ -116,7 +147,8 @@ Proyecto_1/
 ├── sustentacion/
 │   ├── Entrega_1/
 │   │   ├── README.md
-├── test-api.sh
+│   ├── Entrega_2/
+│   │   ├── README.md
 ```
 
 
@@ -126,7 +158,7 @@ Proyecto_1/
 - La carpeta `docs/Entrega_2` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
 - La carpeta `docs/Video` contiene un vídeo para pruebas tanto de carga como de uso en la API.
 - La carpeta `front` contiene el código correspondiente a la interfaz gráfica desarrollada en React, con su respectivo `README.md`
-- La carpeta `sustentacion` contiene el respectivo `README.md` con el enlace a publicacion del video de demostración.
+- La carpeta `sustentacion` contiene el respectivo `README.md` en cada carpeta de entrega con el respectivo enlace del video de demostración.
 
 ## Ejecución del proyecto
 
@@ -177,7 +209,7 @@ docker compose -f docker-compose.local.yml up -d
 ## Uso de apliación
 
 - En la carpeta `collections/` puede encontrar:
-  - archivo JSON de variables de entorno `postman_environment.json`
+  - Archivo JSON de variables de entorno `postman_environment.json`
   - Archivo JSON de pruebas en postman `anb.json`
 
 - El vídeo de la aplicación lo puede encontrar en `sustentacion/Entrega_1\` como archivo o link externo.
