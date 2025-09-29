@@ -9,32 +9,32 @@ import (
 
 // User representa un usuario/jugador en el sistema
 type User struct {
-	ID           int       `json:"id" db:"id"`
-	FirstName    string    `json:"first_name" db:"first_name" validate:"required,min=2,max=50"`
-	LastName     string    `json:"last_name" db:"last_name" validate:"required,min=2,max=50"`
-	Email        string    `json:"email" db:"email" validate:"required,email"`
+	ID           int       `json:"id" db:"id" example:"1"`
+	FirstName    string    `json:"first_name" db:"first_name" validate:"required,min=2,max=50" example:"Juan"`
+	LastName     string    `json:"last_name" db:"last_name" validate:"required,min=2,max=50" example:"Pérez"`
+	Email        string    `json:"email" db:"email" validate:"required,email" example:"juan.perez@email.com"`
 	PasswordHash string    `json:"-" db:"password_hash"`
-	City         string    `json:"city" db:"city" validate:"required,min=2,max=50"`
-	Country      string    `json:"country" db:"country" validate:"required,min=2,max=50"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	City         string    `json:"city" db:"city" validate:"required,min=2,max=50" example:"Bogotá"`
+	Country      string    `json:"country" db:"country" validate:"required,min=2,max=50" example:"Colombia"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at" example:"2024-01-15T10:30:00Z"`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at" example:"2024-01-15T10:30:00Z"`
 }
 
 // UserRegistration representa los datos para registro de usuario
 type UserRegistration struct {
-	FirstName string `json:"first_name" validate:"required,min=2,max=50"`
-	LastName  string `json:"last_name" validate:"required,min=2,max=50"`
-	Email     string `json:"email" validate:"required,email"`
-	Password1 string `json:"password1" validate:"required,min=8"`
-	Password2 string `json:"password2" validate:"required,min=8"`
-	City      string `json:"city" validate:"required,min=2,max=50"`
-	Country   string `json:"country" validate:"required,min=2,max=50"`
+	FirstName string `json:"first_name" validate:"required,min=2,max=50" example:"Juan"`
+	LastName  string `json:"last_name" validate:"required,min=2,max=50" example:"Pérez"`
+	Email     string `json:"email" validate:"required,email" example:"juan.perez@email.com"`
+	Password1 string `json:"password1" validate:"required,min=8" example:"password123"`
+	Password2 string `json:"password2" validate:"required,min=8" example:"password123"`
+	City      string `json:"city" validate:"required,min=2,max=50" example:"Bogotá"`
+	Country   string `json:"country" validate:"required,min=2,max=50" example:"Colombia"`
 }
 
 // UserLogin representa los datos para login
 type UserLogin struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email    string `json:"email" validate:"required,email" example:"juan.perez@email.com"`
+	Password string `json:"password" validate:"required" example:"password123"`
 }
 
 // Video representa un video en el sistema
@@ -95,16 +95,16 @@ type RankingEntry struct {
 
 // APIResponse representa una respuesta genérica de la API
 type APIResponse struct {
-	Message string      `json:"message"`
+	Message string      `json:"message" example:"Operación exitosa"`
 	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Error   string      `json:"error,omitempty" example:"Error en la validación"`
 }
 
 // LoginResponse representa la respuesta del login
 type LoginResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
+	AccessToken string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	TokenType   string `json:"token_type" example:"Bearer"`
+	ExpiresIn   int    `json:"expires_in" example:"3600"`
 }
 
 // VideoStatus constants

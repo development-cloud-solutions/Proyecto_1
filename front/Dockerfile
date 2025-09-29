@@ -1,7 +1,7 @@
 FROM node:alpine AS build
 
 # Argumentos de construcción para variables VITE
-ARG VITE_API_URL=http://localhost:8080
+ARG VITE_API_URL=http://localhost
 ARG VITE_VIDEOS_URL=http://localhost
 ARG VITE_APP_NAME="ANB Rising Stars Showcase"
 ARG VITE_APP_VERSION=1.0.0

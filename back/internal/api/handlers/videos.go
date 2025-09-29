@@ -36,6 +36,20 @@ func NewVideoHandler(db *sql.DB, cfg *config.Config, taskQueue *workers.TaskQueu
 }
 
 // UploadVideo maneja la subida de videos
+// @Summary Subir video
+// @Description Permite a un usuario autenticado subir un video para participar en la competencia
+// @Tags videos
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param video_file formData file true "Archivo de video"
+// @Param title formData string true "Título del video"
+// @Param is_public formData boolean false "Si el video es público para votación"
+// @Success 201 {object} models.APIResponse
+// @Failure 400 {object} models.APIResponse
+// @Failure 401 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /videos/upload [post]
 func (h *VideoHandler) UploadVideo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -107,6 +121,16 @@ func (h *VideoHandler) UploadVideo(c *gin.Context) {
 }
 
 // GetMyVideos lista los videos del usuario autenticado
+// @Summary Obtener mis videos
+// @Description Lista todos los videos subidos por el usuario autenticado
+// @Tags videos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Video
+// @Failure 401 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /videos [get]
 func (h *VideoHandler) GetMyVideos(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -129,6 +153,18 @@ func (h *VideoHandler) GetMyVideos(c *gin.Context) {
 }
 
 // GetVideoDetail obtiene el detalle de un video específico
+// @Summary Obtener detalles de video
+// @Description Obtiene los detalles de un video específico del usuario autenticado
+// @Tags videos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param video_id path string true "ID del video"
+// @Success 200 {object} models.Video
+// @Failure 401 {object} models.APIResponse
+// @Failure 404 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /videos/{video_id} [get]
 func (h *VideoHandler) GetVideoDetail(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -158,6 +194,18 @@ func (h *VideoHandler) GetVideoDetail(c *gin.Context) {
 }
 
 // DeleteVideo elimina un video
+// @Summary Eliminar video
+// @Description Elimina un video específico del usuario autenticado
+// @Tags videos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param video_id path string true "ID del video"
+// @Success 200 {object} models.APIResponse
+// @Failure 401 {object} models.APIResponse
+// @Failure 404 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /videos/{video_id} [delete]
 func (h *VideoHandler) DeleteVideo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
