@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS videos (
     votes_count INTEGER DEFAULT 0,
     is_public BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP -- DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índices para optimizar consultas

@@ -33,10 +33,10 @@ type VideoProcessor struct {
 // NewVideoProcessor crea un procesador listo para Start()
 func NewVideoProcessor(queue *TaskQueue, db *sql.DB, videoService services.VideoServiceInterface) *VideoProcessor {
 	redisOpt := asynq.RedisClientOpt{
-		Addr: queue.cfg.RedisURL, // Corregido: usa RedisURL
+		Addr: queue.cfg.RedisURL,
 	}
 	server := asynq.NewServer(redisOpt, asynq.Config{
-		Concurrency: queue.cfg.WorkerConcurrency, // Corregido: usa WorkerConcurrency
+		Concurrency: queue.cfg.WorkerConcurrency,
 	})
 
 	mux := asynq.NewServeMux()
@@ -118,32 +118,36 @@ func (vp *VideoProcessor) HandleVideoProcessing(ctx context.Context, t *asynq.Ta
 	}
 	defer os.Remove(tmpNoAudio)
 
-	// 3. Transcodificar a 720p con aspecto 16:9
-	log.Printf("Converting video %s to 720p 16:9", payload.VideoID)
-	tmpConverted := filepath.Join(os.TempDir(), fmt.Sprintf("%s_converted.mp4", payload.VideoID))
-	if err := utils.ConvertTo720p(tmpNoAudio, tmpConverted); err != nil {
-		_ = vp.videoService.MarkFailed(payload.VideoID, "failed to convert video to 720p")
-		return fmt.Errorf("failed to convert video: %v", err)
-	}
-	defer os.Remove(tmpConverted)
+	// 3. Conversión optimizada a 720p + watermark en un solo paso
+	log.Printf("Converting video %s to 720p with watermark ", payload.VideoID)
+	watermarkPath := "/app/assets/anb_watermark.png"
 
-	// 4. Añadir marca de agua ANB
-	log.Printf("Adding ANB watermark to video %s", payload.VideoID)
-	watermarkPath := "/app/assets/anb_watermark.png" // Ruta donde debe estar la marca de agua
-	if utils.FileExists(watermarkPath) {
-		if err := utils.AddWatermark(tmpConverted, dstPath, watermarkPath); err != nil {
-			log.Printf("Warning: failed to add watermark, continuing without it: %v", err)
-			// Continuar sin marca de agua si falla
+	// Usar la función optimizada que combina conversión y watermark
+	if err := utils.OptimizedConvertAndWatermark(tmpNoAudio, dstPath, watermarkPath); err != nil {
+		log.Printf("Optimized processing failed, falling back to step-by-step: %v", err)
+
+		// Fallback: procesamiento por pasos si falla el optimizado
+		tmpConverted := filepath.Join(os.TempDir(), fmt.Sprintf("%s_converted.mp4", payload.VideoID))
+		if err := utils.ConvertTo720p(tmpNoAudio, tmpConverted); err != nil {
+			_ = vp.videoService.MarkFailed(payload.VideoID, "failed to convert video to 720p")
+			return fmt.Errorf("failed to convert video: %v", err)
+		}
+		defer os.Remove(tmpConverted)
+
+		// Intentar watermark como paso separado
+		if utils.FileExists(watermarkPath) {
+			if err := utils.AddWatermark(tmpConverted, dstPath, watermarkPath); err != nil {
+				log.Printf("Warning: failed to add watermark, continuing without it: %v", err)
+				if err := utils.CopyFile(tmpConverted, dstPath); err != nil {
+					_ = vp.videoService.MarkFailed(payload.VideoID, "failed to copy final video")
+					return fmt.Errorf("failed to copy video: %v", err)
+				}
+			}
+		} else {
 			if err := utils.CopyFile(tmpConverted, dstPath); err != nil {
 				_ = vp.videoService.MarkFailed(payload.VideoID, "failed to copy final video")
 				return fmt.Errorf("failed to copy video: %v", err)
 			}
-		}
-	} else {
-		log.Printf("Warning: watermark not found at %s, skipping", watermarkPath)
-		if err := utils.CopyFile(tmpConverted, dstPath); err != nil {
-			_ = vp.videoService.MarkFailed(payload.VideoID, "failed to copy final video")
-			return fmt.Errorf("failed to copy video: %v", err)
 		}
 	}
 

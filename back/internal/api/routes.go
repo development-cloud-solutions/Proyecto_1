@@ -53,9 +53,8 @@ func SetupRoutes(db *sql.DB, cfg *config.Config, taskQueue *workers.TaskQueue, v
 	{
 		authGroup.POST("/signup", authHandler.Signup)
 		authGroup.POST("/login", authHandler.Login)
-
+		authGroup.POST("/logout", middleware.AuthMiddleware(cfg), authHandler.Logout)
 		authGroup.GET("/profile", middleware.AuthMiddleware(cfg), authHandler.GetProfile)
-
 	}
 
 	// Protected video routes

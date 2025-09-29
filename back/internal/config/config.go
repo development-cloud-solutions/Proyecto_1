@@ -68,7 +68,7 @@ func Load() *Config {
 		OutputResolution:  getEnv("OUTPUT_RESOLUTION", "1280x720"),
 		OutputAspectRatio: getEnv("OUTPUT_ASPECT_RATIO", "16:9"),
 
-		WorkerConcurrency: getIntEnv("WORKER_CONCURRENCY", "5"),
+		WorkerConcurrency: getIntEnv("WORKER_CONCURRENCY", "12"), // concurrencia
 	}
 }
 

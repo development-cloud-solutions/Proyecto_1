@@ -102,9 +102,9 @@ cat > "$RESULTS_DIR/register_data.json" << EOF
   "first_name": "Test",
   "last_name": "User",
   "email": "test.user.\$(date +%s)@example.com",
-  "password1": "TestPass123!",
-  "password2": "TestPass123!",
-  "city": "TestCity",
+  "password1": "StrongPass123",
+  "password2": "StrongPass123",
+  "city": "Bogotá",
   "country": "TestCountry"
 }
 EOF
@@ -113,7 +113,7 @@ EOF
 cat > "$RESULTS_DIR/login_data.json" << EOF
 {
   "email": "test.user@example.com",
-  "password": "TestPass123!"
+  "password": "StrongPass123"
 }
 EOF
 
