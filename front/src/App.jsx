@@ -687,6 +687,7 @@ const validateVideoFile = (file) => {
 
 // API Service
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE_VIDEOS_URL = import.meta.env.VITE_VIDEOS_URL || "http://localhost";
 
 class ApiService {
   constructor() {
@@ -1894,7 +1895,7 @@ const App = () => {
                     onLoadedData={() => {
                     }}
                   >
-                    <source src={`${BASE_URL}${video.processed_url}`} type="video/mp4" />
+                    <source src={`${BASE_VIDEOS_URL}${video.processed_url}`} type="video/mp4" />
                     Tu navegador no soporta el elemento de video.
                   </video>
                 ) : (
@@ -1972,7 +1973,7 @@ const App = () => {
                 onEnded={() => setIsPlaying(false)}
                 onError={() => setVideoError('Error al cargar el video')}
               >
-                <source src={`${BASE_URL}${video.processed_url}`} type="video/mp4" />
+                <source src={`${BASE_VIDEOS_URL}${video.processed_url}`} type="video/mp4" />
                 Tu navegador no soporta el elemento de video.
               </video>
             ) : (
@@ -2134,7 +2135,7 @@ const App = () => {
                 autoPlay
                 onEnded={() => setIsPlaying(false)}
               >
-                <source src={`${BASE_URL}${video.processed_url}`} type="video/mp4" />
+                <source src={`${BASE_VIDEOS_URL}${video.processed_url}`} type="video/mp4" />
                 Tu navegador no soporta el elemento de video.
               </video>
             ) : (
