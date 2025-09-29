@@ -218,10 +218,6 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 # Obtener stats finales de Docker
 docker stats --no-stream > "$REPORTS_DIR/docker-stats-end-$TIMESTAMP.txt" 2>/dev/null || echo "Docker stats not available"
 
-# NOTA: artillery report fue descontinuado - los resultados están disponibles en JSON
-echo -e "${YELLOW}- Resultados disponibles en formato JSON${NC}"
-echo -e "${YELLOW}  Para análisis visual, considere Artillery Cloud: https://app.artillery.io${NC}"
-
 # Análisis básico de resultados
 echo -e "${BLUE} Análisis de Resultados:${NC}"
 if [ -f "$RESULTS_JSON" ]; then
@@ -353,7 +349,6 @@ cat > "$SUMMARY_FILE" << EOF
 - Resultados JSON: \`load-test-results-$TIMESTAMP.json\`
 - Docker stats: \`docker-stats-*-$TIMESTAMP.txt\`
 - Análisis en consola: Ver output detallado arriba
-- Para reportes visuales: Importar JSON a [Artillery Cloud](https://app.artillery.io)
 
 ## Próximos Pasos
 

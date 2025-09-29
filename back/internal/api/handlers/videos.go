@@ -90,11 +90,11 @@ func (h *VideoHandler) UploadVideo(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Parse is_public manually since ShouldBind doesn't handle boolean from form correctly
 	isPublicStr := c.PostForm("is_public")
 	upload.IsPublic = isPublicStr == "true"
-	
+
 	if err := h.validator.Struct(upload); err != nil {
 		c.JSON(http.StatusBadRequest, models.APIResponse{
 			Error: "Validation failed: " + err.Error(),
