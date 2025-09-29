@@ -84,7 +84,7 @@ services:
       - VITE_ENVIRONMENT=development
     container_name: anb_frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
     environment:
       - TZ=America/Bogota
     networks:
