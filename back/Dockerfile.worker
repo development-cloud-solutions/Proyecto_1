@@ -27,6 +27,9 @@ WORKDIR /app
 # Copiar el binario del worker
 COPY --from=builder /app/worker .
 
+# Copiar archivo .env
+COPY --from=builder /app/.env ./
+
 # Copiar assets (marca de agua)
 COPY assets/ /app/assets/
 

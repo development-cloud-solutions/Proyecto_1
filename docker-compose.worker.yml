@@ -1,0 +1,40 @@
+services:
+  worker:
+    build:
+      context: ./back
+      dockerfile: Dockerfile.worker
+    container_name: anb_worker
+    command: ./worker
+    environment:
+      - TZ=America/Bogota
+      # Database configuration (usar Amazon RDS)
+      - DB_DRIVER=postgres
+      - DB_HOST=192.168.135.135
+      - DB_PORT=5432
+      - DB_NAME=proyecto_1
+      - DB_USER=usrpostgres
+      - DB_PASSWORD=password
+      - DB_SSL_MODE=disable
+
+      # Redis
+      - REDIS_URL=172.21.10.97:6379 # IP DE REDIRS EN AWS
+
+      # Worker config
+      - WORKER_MODE=true
+      - ENVIRONMENT=development
+      - UPLOAD_PATH=/app/uploads
+      - PROCESSED_PATH=/app/processed
+      - WORKER_CONCURRENCY=3
+    volumes:
+      # Montaje del NFS compartido
+      - /mnt/nfs/uploads:/app/uploads
+      - /mnt/nfs/processed:/app/processed
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.8'     # 0.90 de CPU para worker principal
+          memory: 1600M   # 0.80 de RAM para worker principal (1.6GB)
+        reservations:
+          cpus: '1.0'     # Garantizar 0.50 CPU mínimo
+          memory: 1024M   # Garantizar 1GB mínimo

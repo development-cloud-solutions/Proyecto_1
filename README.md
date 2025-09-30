@@ -14,7 +14,10 @@ Proyecto_1/
 ├── .gitignore
 ├── back/
 │   ├── .dockerignore
+│   ├── .env
 │   ├── .env.example
+│   ├── artillery-config-simple.yml
+│   ├── artillery-config-video.yml
 │   ├── artillery-config.yml
 │   ├── assets/
 │   │   ├── anb_watermark.png
@@ -25,6 +28,10 @@ Proyecto_1/
 │   │   │   ├── main.go
 │   ├── Dockerfile.api
 │   ├── Dockerfile.worker
+│   ├── docs/
+│   │   ├── docs.go
+│   │   ├── swagger.json
+│   │   ├── swagger.yaml
 │   ├── go.mod
 │   ├── go.sum
 │   ├── internal/
@@ -56,6 +63,7 @@ Proyecto_1/
 │   │   ├── workers/
 │   │   │   ├── task_queue.go
 │   │   │   ├── video_processor.go
+│   ├── Makefile
 │   ├── nginx/
 │   │   ├── nginx.conf
 │   ├── README.md
@@ -86,6 +94,7 @@ Proyecto_1/
 │   │   │   ├── User_Registration_results.txt
 │   ├── jmeter/
 │   │   ├── anb_rising_stars_test.jmx
+│   ├── plan_de_pruebas.md
 │   ├── README.md
 ├── CLAUDE.md
 ├── collections/
@@ -106,17 +115,25 @@ Proyecto_1/
 │   ├── 006_create_views.up.sql
 │   ├── 007_create_triggers.down.sql
 │   ├── 007_create_triggers.up.sql
+│   ├── 008_grant_permissions.sql
+├── docker-cloud/
+├── docker-compose.api.yml
+├── docker-compose.worker.yml
 ├── docker-compose.yml
 ├── docs/
 │   ├── Entrega_1/
 │   │   ├── ISIS4426_Entrega_1_Plan_Pruebas_Carga.pdf
 │   │   ├── ISIS4426_Entrega_1_Req.pdf
 │   ├── Entrega_2/
+│   │   ├── 001_Proyecto-Entrega_2.pdf
+│   │   ├── 002_Análisis_Capacidad.pdf
 │   │   ├── ISIS4426_Entrega_2_Req.pdf
 │   ├── Video/
 │   │   ├── README.md
 │   │   ├── Test_Video.mp4
 ├── front/
+│   ├── .dockerignore
+│   ├── .env
 │   ├── .env.example
 │   ├── .gitignore
 │   ├── dist/
@@ -143,6 +160,12 @@ Proyecto_1/
 │   │   │   ├── api.js
 │   ├── tailwind.config.js
 │   ├── vite.config.js
+├── load-test-reports/
+│   ├── load-test-results-20250929-213632.json
+│   ├── load-test-results-20250929-224856.json
+├── Makefile
+├── package-lock.json
+├── package.json
 ├── README.md
 ├── sustentacion/
 │   ├── Entrega_1/
@@ -156,9 +179,14 @@ Proyecto_1/
 - La carpeta `db` contiene el código SQL para la creación de objetos en la base de datos
 - La carpeta `docs/Entrega_1` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
 - La carpeta `docs/Entrega_2` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+  - `docs\Entrega_2\001_Proyecto-Entrega_2.pdf` contiene la información del despliegue del proyecto en AWS
+  - `docs\Entrega_2\002_Análisis_Capacidad.pdf` contiene la información correspondiente a las pruebas de carga realizadas.
+  - `docs\Entrega_2\ISIS4426_Entrega_2_Req.pdf` documento de requerimientos para la entrega 2.
 - La carpeta `docs/Video` contiene un vídeo para pruebas tanto de carga como de uso en la API.
 - La carpeta `front` contiene el código correspondiente a la interfaz gráfica desarrollada en React, con su respectivo `README.md`
 - La carpeta `sustentacion` contiene el respectivo `README.md` en cada carpeta de entrega con el respectivo enlace del video de demostración.
+  - `sustentacion\Entrega_1\README.md` contiene el link de sustenación al video de la entrega 1.
+  - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 2.
 
 ## Ejecución del proyecto
 
@@ -212,4 +240,11 @@ docker compose -f docker-compose.local.yml up -d
   - Archivo JSON de variables de entorno `postman_environment.json`
   - Archivo JSON de pruebas en postman `anb.json`
 
-- El vídeo de la aplicación lo puede encontrar en `sustentacion/Entrega_1\` como archivo o link externo.
+
+# Despliegue en AWS
+
+> Para la Entrega 2, se realizo el uso de AWS mediante servicios de EC2, en los cuales se desplegaron los servicios de la aplicación.
+
+Con el fin de crear los objetos necesarios en EC2, se segmento el docker compose en archivos separados:
+- Para el despliegue del backend, se creo el archivo `docker-compose.api.yml` con la información y objetos necesarios para la misma.
+- Para el despligue del worker, se creo el archivo `docker-compose.worker.yml` con los recursos respectivos para la ejecución de este.

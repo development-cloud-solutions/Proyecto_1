@@ -1,0 +1,557 @@
+basePath: /api
+definitions:
+  models.APIResponse:
+    properties:
+      data: {}
+      error:
+        example: Error en la validación
+        type: string
+      message:
+        example: Operación exitosa
+        type: string
+    type: object
+  models.LoginResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  models.User:
+    properties:
+      city:
+        example: Bogotá
+        maxLength: 50
+        minLength: 2
+        type: string
+      country:
+        example: Colombia
+        maxLength: 50
+        minLength: 2
+        type: string
+      created_at:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      email:
+        example: juan.perez@email.com
+        type: string
+      first_name:
+        example: Juan
+        maxLength: 50
+        minLength: 2
+        type: string
+      id:
+        example: 1
+        type: integer
+      last_name:
+        example: Pérez
+        maxLength: 50
+        minLength: 2
+        type: string
+      updated_at:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    required:
+    - city
+    - country
+    - email
+    - first_name
+    - last_name
+    type: object
+  models.UserLogin:
+    properties:
+      email:
+        example: juan.perez@email.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.UserRegistration:
+    properties:
+      city:
+        example: Bogotá
+        maxLength: 50
+        minLength: 2
+        type: string
+      country:
+        example: Colombia
+        maxLength: 50
+        minLength: 2
+        type: string
+      email:
+        example: juan.perez@email.com
+        type: string
+      first_name:
+        example: Juan
+        maxLength: 50
+        minLength: 2
+        type: string
+      last_name:
+        example: Pérez
+        maxLength: 50
+        minLength: 2
+        type: string
+      password1:
+        example: password123
+        minLength: 8
+        type: string
+      password2:
+        example: password123
+        minLength: 8
+        type: string
+    required:
+    - city
+    - country
+    - email
+    - first_name
+    - last_name
+    - password1
+    - password2
+    type: object
+  models.Video:
+    properties:
+      is_public:
+        type: boolean
+      original_filename:
+        type: string
+      original_url:
+        type: string
+      processed_at:
+        type: string
+      processed_url:
+        type: string
+      status:
+        type: string
+      title:
+        maxLength: 100
+        minLength: 5
+        type: string
+      uploaded_at:
+        type: string
+      user_city:
+        type: string
+      user_first_name:
+        description: Campos adicionales para joins
+        type: string
+      user_id:
+        type: integer
+      user_last_name:
+        type: string
+      video_id:
+        type: string
+      votes:
+        type: integer
+    required:
+    - title
+    type: object
+host: localhost
+info:
+  contact:
+    email: support@swagger.io
+    name: Soporte API
+    url: http://www.swagger.io/support
+  description: API para la plataforma ANB Rising Stars donde los usuarios pueden subir
+    videos y participar en votaciones
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: ANB Rising Stars Showcase API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Autentica un usuario existente y devuelve un token JWT
+      parameters:
+      - description: Credenciales del usuario
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      summary: Autenticar usuario
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Cierra la sesión del usuario autenticado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Cerrar sesión
+      tags:
+      - auth
+  /auth/profile:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene el perfil del usuario autenticado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obtener perfil de usuario
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Registra un nuevo usuario en la plataforma ANB Rising Stars
+      parameters:
+      - description: Datos del usuario a registrar
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserRegistration'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      summary: Registrar nuevo usuario
+      tags:
+      - auth
+  /public/rankings:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene el ranking de videos con paginación y filtro opcional por
+        ciudad
+      parameters:
+      - default: 1
+        description: Número de página
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Límite de resultados por página
+        in: query
+        name: limit
+        type: integer
+      - description: Filtrar por ciudad
+        in: query
+        name: city
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Video'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      summary: Obtener rankings
+      tags:
+      - public
+  /public/videos:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene la lista de videos públicos disponibles para votación
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Video'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      summary: Listar videos públicos
+      tags:
+      - public
+  /public/videos/{video_id}/vote:
+    post:
+      consumes:
+      - application/json
+      description: Permite a un usuario autenticado votar por un video público
+      parameters:
+      - description: ID del video
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "409":
+          description: Usuario ya votó por este video
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Votar por video
+      tags:
+      - public
+  /user/votes:
+    get:
+      consumes:
+      - application/json
+      description: Obtiene la lista de IDs de videos por los que el usuario autenticado
+        ya ha votado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista de IDs de videos votados
+          schema:
+            items:
+              type: string
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obtener votos del usuario
+      tags:
+      - user
+  /videos:
+    get:
+      consumes:
+      - application/json
+      description: Lista todos los videos subidos por el usuario autenticado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Video'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obtener mis videos
+      tags:
+      - videos
+  /videos/{video_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Elimina un video específico del usuario autenticado
+      parameters:
+      - description: ID del video
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Eliminar video
+      tags:
+      - videos
+    get:
+      consumes:
+      - application/json
+      description: Obtiene los detalles de un video específico del usuario autenticado
+      parameters:
+      - description: ID del video
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Video'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obtener detalles de video
+      tags:
+      - videos
+  /videos/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Permite a un usuario autenticado subir un video para participar
+        en la competencia
+      parameters:
+      - description: Archivo de video
+        in: formData
+        name: video_file
+        required: true
+        type: file
+      - description: Título del video
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Si el video es público para votación
+        in: formData
+        name: is_public
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Subir video
+      tags:
+      - videos
+securityDefinitions:
+  BearerAuth:
+    description: Ingresa 'Bearer ' seguido de tu JWT token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

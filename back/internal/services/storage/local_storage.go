@@ -27,7 +27,9 @@ func (s *LocalStorage) SaveFile(file multipart.File, destPath string) error {
 		return err
 	}
 	out, err := os.Create(full)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer out.Close()
 	_, err = io.Copy(out, file)
 	return err
@@ -38,6 +40,8 @@ func (s *LocalStorage) DeleteFile(path string) error { return os.Remove(s.fullPa
 func (s *LocalStorage) GetProcessedFilePath(videoID string) (string, error) {
 	path := filepath.Join(s.BaseDir, "processed", videoID+".mp4")
 	_, err := os.Stat(path)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	return path, nil
 }

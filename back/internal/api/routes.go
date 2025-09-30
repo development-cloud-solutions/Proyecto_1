@@ -12,6 +12,8 @@ import (
 	"back/internal/workers"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // SetupRoutes configura todas las rutas de la aplicación
@@ -38,6 +40,9 @@ func SetupRoutes(db *sql.DB, cfg *config.Config, taskQueue *workers.TaskQueue, v
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	videoHandler := handlers.NewVideoHandler(db, cfg, taskQueue, videoService)
 	rankingHandler := handlers.NewRankingHandler(db, cfg)
+
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Health
 	router.GET("/health", func(c *gin.Context) {

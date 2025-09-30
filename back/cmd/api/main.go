@@ -13,7 +13,29 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+
+	_ "back/docs" // Importar documentos generados por swag
 )
+
+// @title ANB Rising Stars Showcase API
+// @version 1.0
+// @description API para la plataforma ANB Rising Stars donde los usuarios pueden subir videos y participar en votaciones
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name Soporte API
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost
+// @BasePath /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Ingresa 'Bearer ' seguido de tu JWT token
 
 func main() {
 	if err := godotenv.Load(); err != nil {

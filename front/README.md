@@ -59,7 +59,7 @@ Frontend web application for the ANB Rising Stars basketball talent showcase com
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `http://localhost:8080` |
+| `VITE_API_URL` | Backend API URL | `http://localhost` |
 | `VITE_APP_NAME` | Application name | `ANB Rising Stars Showcase` |
 | `VITE_ENVIRONMENT` | Environment | `development` |
 

@@ -31,6 +31,14 @@ func NewRankingHandler(db *sql.DB, cfg *config.Config) *RankingHandler {
 }
 
 // ListPublicVideos devuelve una lista de videos públicamente disponibles para votación
+// @Summary Listar videos públicos
+// @Description Obtiene la lista de videos públicos disponibles para votación
+// @Tags public
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Video
+// @Failure 500 {object} models.APIResponse
+// @Router /public/videos [get]
 func (h *RankingHandler) ListPublicVideos(c *gin.Context) {
 	query := `
 		SELECT 
@@ -96,6 +104,20 @@ func (h *RankingHandler) ListPublicVideos(c *gin.Context) {
 }
 
 // VoteVideo permite a un usuario votar por un video público
+// @Summary Votar por video
+// @Description Permite a un usuario autenticado votar por un video público
+// @Tags public
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param video_id path string true "ID del video"
+// @Success 201 {object} models.APIResponse
+// @Failure 400 {object} models.APIResponse
+// @Failure 401 {object} models.APIResponse
+// @Failure 404 {object} models.APIResponse
+// @Failure 409 {object} models.APIResponse "Usuario ya votó por este video"
+// @Failure 500 {object} models.APIResponse
+// @Router /public/videos/{video_id}/vote [post]
 func (h *RankingHandler) VoteVideo(c *gin.Context) {
 	videoIDStr := c.Param("video_id")
 	userID, exists := c.Get("user_id")
@@ -207,6 +229,17 @@ func (h *RankingHandler) VoteVideo(c *gin.Context) {
 }
 
 // GetRankings obtiene el ranking de jugadores
+// @Summary Obtener rankings
+// @Description Obtiene el ranking de videos con paginación y filtro opcional por ciudad
+// @Tags public
+// @Accept json
+// @Produce json
+// @Param page query int false "Número de página" default(1)
+// @Param limit query int false "Límite de resultados por página" default(50)
+// @Param city query string false "Filtrar por ciudad"
+// @Success 200 {array} models.Video
+// @Failure 500 {object} models.APIResponse
+// @Router /public/rankings [get]
 func (h *RankingHandler) GetRankings(c *gin.Context) {
 	page := getRankingIntParam(c, "page", 1)
 	limit := getRankingIntParam(c, "limit", 50)
@@ -251,6 +284,16 @@ func (h *RankingHandler) GetTopRankings(c *gin.Context) {
 }
 
 // GetUserVotes obtiene los IDs de videos por los que el usuario ya votó
+// @Summary Obtener votos del usuario
+// @Description Obtiene la lista de IDs de videos por los que el usuario autenticado ya ha votado
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} string "Lista de IDs de videos votados"
+// @Failure 401 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /user/votes [get]
 func (h *RankingHandler) GetUserVotes(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

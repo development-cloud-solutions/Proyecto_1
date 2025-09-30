@@ -661,12 +661,12 @@
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "http://localhost",
+			"value": "http://3.227.188.83",
 			"type": "string"
 		},
 		{
 			"key": "deploy_url",
-			"value": "http://ip_de_su_proyecto",
+			"value": "http://3.227.188.83",
 			"type": "string"
 		},
 		{

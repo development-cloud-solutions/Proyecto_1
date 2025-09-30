@@ -30,6 +30,16 @@ func NewAuthHandler(db *sql.DB, cfg *config.Config) *AuthHandler {
 }
 
 // Signup maneja el registro de nuevos usuarios
+// @Summary Registrar nuevo usuario
+// @Description Registra un nuevo usuario en la plataforma ANB Rising Stars
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body models.UserRegistration true "Datos del usuario a registrar"
+// @Success 201 {object} models.APIResponse
+// @Failure 400 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /auth/signup [post]
 func (h *AuthHandler) Signup(c *gin.Context) {
 	var req models.UserRegistration
 
@@ -103,6 +113,17 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 }
 
 // Login maneja la autenticación de usuarios
+// @Summary Autenticar usuario
+// @Description Autentica un usuario existente y devuelve un token JWT
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body models.UserLogin true "Credenciales del usuario"
+// @Success 200 {object} models.LoginResponse
+// @Failure 400 {object} models.APIResponse
+// @Failure 401 {object} models.APIResponse
+// @Failure 500 {object} models.APIResponse
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.UserLogin
 
@@ -157,6 +178,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // GetProfile retorna el perfil del usuario autenticado
+// @Summary Obtener perfil de usuario
+// @Description Obtiene el perfil del usuario autenticado
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.User
+// @Failure 401 {object} models.APIResponse
+// @Failure 404 {object} models.APIResponse
+// @Router /auth/profile [get]
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -178,6 +209,15 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 }
 
 // Logout maneja el cierre de sesión
+// @Summary Cerrar sesión
+// @Description Cierra la sesión del usuario autenticado
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.APIResponse
+// @Failure 401 {object} models.APIResponse
+// @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, models.APIResponse{

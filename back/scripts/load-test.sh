@@ -105,7 +105,7 @@ RETRY_COUNT=0
 PORT=80
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://localhost:${PORT}/health > /dev/null 2>&1; then
+    if curl -f http://3.227.188.83/:${PORT}/health > /dev/null 2>&1; then
         echo -e "${GREEN}  API está disponible${NC}"
         break
     fi
@@ -139,7 +139,7 @@ if [ ! -f "scripts/load-test-data.csv" ]; then
 fi
 
 # Verificar archivo de video para las pruebas de upload
-VIDEO_PATH="../docs/Video/Test_Video_Small.mp4"
+VIDEO_PATH="../docs/Video/Test_Video.mp4"
 if [ ! -f "$VIDEO_PATH" ]; then
     echo -e "${YELLOW}  Archivo de video no encontrado: $VIDEO_PATH${NC}"
     echo -e "${YELLOW}  Las pruebas de upload de video pueden fallar${NC}"
@@ -217,10 +217,6 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 
 # Obtener stats finales de Docker
 docker stats --no-stream > "$REPORTS_DIR/docker-stats-end-$TIMESTAMP.txt" 2>/dev/null || echo "Docker stats not available"
-
-# NOTA: artillery report fue descontinuado - los resultados están disponibles en JSON
-echo -e "${YELLOW}- Resultados disponibles en formato JSON${NC}"
-echo -e "${YELLOW}  Para análisis visual, considere Artillery Cloud: https://app.artillery.io${NC}"
 
 # Análisis básico de resultados
 echo -e "${BLUE} Análisis de Resultados:${NC}"
@@ -343,7 +339,7 @@ cat > "$SUMMARY_FILE" << EOF
 
 ## Configuración de Prueba
 
-- **Target**: http://localhost:8080
+- **Target**: http://3.227.188.83/:${PORT}
 - **Fases**: 6 (Warmup → Normal → Media → Alta → Pico → Recuperación)
 - **Usuarios máximos**: 200 usuarios/segundo
 - **Escenarios**: Navegación básica (60%), Autenticación (25%), Interacción avanzada (10%), Upload videos (5%)
@@ -353,7 +349,6 @@ cat > "$SUMMARY_FILE" << EOF
 - Resultados JSON: \`load-test-results-$TIMESTAMP.json\`
 - Docker stats: \`docker-stats-*-$TIMESTAMP.txt\`
 - Análisis en consola: Ver output detallado arriba
-- Para reportes visuales: Importar JSON a [Artillery Cloud](https://app.artillery.io)
 
 ## Próximos Pasos
 

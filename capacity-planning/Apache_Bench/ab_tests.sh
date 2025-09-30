@@ -4,7 +4,7 @@ set -e
 
 # Obtener el directorio raíz del proyecto
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RESULTS_DIR="$PROJECT_ROOT/load-test-results"
 mkdir -p "$RESULTS_DIR"
 
@@ -26,8 +26,8 @@ TOTAL_REQUESTS=1000
 TEST_DURATION=30
 
 # URLs basadas en la colección Postman
-BASE_URL="http://localhost:8080/api"
-BASE_URL_HEALTH="http://localhost:8080"
+BASE_URL="http://3.227.188.83"
+BASE_URL_HEALTH="http://3.227.188.83"
 
 # Headers comunes
 CONTENT_TYPE_HEADER="Content-Type: application/json"
@@ -130,16 +130,16 @@ echo "Iniciando pruebas de carga..."
 run_bench_test "Health Check" "$BASE_URL_HEALTH/health" "GET" "" ""
 
 # 2. Register User (POST)
-run_bench_test "User Registration" "$BASE_URL/auth/signup" "POST" "$RESULTS_DIR/register_data.json" "$CONTENT_TYPE_HEADER"
+run_bench_test "User Registration" "$BASE_URL/api/auth/signup" "POST" "$RESULTS_DIR/register_data.json" "$CONTENT_TYPE_HEADER"
 
 # 3. Login User (POST)
-run_bench_test "User Login" "$BASE_URL/auth/login" "POST" "$RESULTS_DIR/login_data.json" "$CONTENT_TYPE_HEADER"
+run_bench_test "User Login" "$BASE_URL/api/auth/login" "POST" "$RESULTS_DIR/login_data.json" "$CONTENT_TYPE_HEADER"
 
 # 4. Get Profile (GET) - Nota: Requiere token, esta prueba será básica
-run_bench_test "Get Profile" "$BASE_URL/auth/profile" "GET" "" "$CONTENT_TYPE_HEADER"
+run_bench_test "Get Profile" "$BASE_URL/api/auth/profile" "GET" "" "$CONTENT_TYPE_HEADER"
 
 # 5. Get Videos (GET)
-run_bench_test "Get Videos" "$BASE_URL/videos" "GET" "" "$CONTENT_TYPE_HEADER"
+run_bench_test "Get Videos" "$BASE_URL/api/videos" "GET" "" "$CONTENT_TYPE_HEADER"
 
 # 6. Pruebas con diferentes niveles de concurrencia
 echo "Ejecutando pruebas con diferentes niveles de concurrencia..."
