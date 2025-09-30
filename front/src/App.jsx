@@ -1497,6 +1497,7 @@ const App = () => {
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold mb-8 text-gray-800">Videos de Competencia</h2>
+
           <p className="text-gray-600 mb-6">Aquí aparecen los vídeos públicos de otros usuarios por los cuales votar. <br/>Vota por los mejores videos y ayuda a determinar a los finalistas</p>
 
           <div className="mb-6 flex flex-wrap gap-2">
