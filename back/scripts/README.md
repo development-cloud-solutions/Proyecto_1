@@ -97,6 +97,4 @@
 
 ---
 
-## Conclusión
 
-- La API está funcionando correctamente en todas las áreas probadas: autenticación, gestión de videos y verificación de salud del sistema.
