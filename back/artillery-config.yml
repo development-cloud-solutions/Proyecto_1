@@ -1,5 +1,5 @@
 config:
-  target: 'http://localhost'
+  target: 'http://3.227.188.83'
   http:
     timeout: 180
     pool: 40
@@ -39,7 +39,7 @@ config:
       - 'city'
   variables:
     test_password: "StrongPass123"
-  processor: "scripts/rocessor.js"
+  processor: "scripts/processor.js"
     
 
 scenarios:

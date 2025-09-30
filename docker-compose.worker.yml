@@ -17,7 +17,7 @@ services:
       - DB_SSL_MODE=disable
 
       # Redis
-      - REDIS_URL=192.168.135.132:6379
+      - REDIS_URL=172.21.10.97:6379 # IP DE REDIRS EN AWS
 
       # Worker config
       - WORKER_MODE=true

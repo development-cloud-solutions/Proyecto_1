@@ -41,7 +41,7 @@ services:
 
       # Database configuration
       - DB_DRIVER=postgres
-      - DB_HOST=192.168.135.135
+      - DB_HOST=171.21.2.60 # IP DE BASE DE DATOS EN AWS
       - DB_PORT=5432
       - DB_NAME=proyecto_1
       - DB_USER=usrpostgres
@@ -77,8 +77,8 @@ services:
       context: ./front
       dockerfile: Dockerfile
       args:
-      - VITE_API_URL=http://192.168.135.132:8080
-      - VITE_VIDEOS_URL=http://192.168.135.132
+      - VITE_API_URL=http://3.227.188.83
+      - VITE_VIDEOS_URL=http://3.227.188.83
       - VITE_APP_NAME=ANB Rising Stars Showcase
       - VITE_APP_VERSION=1.0.0
       - VITE_ENVIRONMENT=development

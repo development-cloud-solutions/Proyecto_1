@@ -38,7 +38,7 @@ module.exports = {
   },
 
   uploadVideo: function (context, events, done) {
-    const videoPath = path.resolve(__dirname, './../docs/Video/Test_Video.mp4');
+    const videoPath = path.resolve(__dirname, './../../docs/Video/Test_Video.mp4');
 
     // Verifica que el archivo existe
     if (!fs.existsSync(videoPath)) {
@@ -63,8 +63,8 @@ module.exports = {
 
     const requestOptions = {
       method: 'POST',
-      host: 'localhost',
-      port: 8080,
+      host: '3.227.188.83',
+      port: 80,
       path: '/api/videos/upload',
       headers: {
         ...form.getHeaders(),
