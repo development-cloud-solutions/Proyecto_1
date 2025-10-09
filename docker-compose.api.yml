@@ -1,4 +1,25 @@
+# Docker Compose para API Layer con Auto Scaling en AWS
+# Este archivo está diseñado para ejecutarse en instancias EC2 dentro de un Auto Scaling Group
+# detrás de un Elastic Load Balancer (ELB)
+#
+# Arquitectura:
+# - ELB distribuye tráfico a múltiples instancias EC2
+# - Cada instancia EC2 ejecuta: API + Redis (local cache) + Frontend + Nginx
+# - Todos comparten: RDS (PostgreSQL) + S3 (storage)
+# - Auto Scaling Group: min=1, desired=1, max=3 instancias
+#
+# Variables de entorno requeridas:
+# - AWS_REGION: Región de AWS (us-east-1 o us-west-2)
+# - S3_BUCKET_NAME: Nombre del bucket S3 para videos
+# - DB_HOST: Endpoint de Amazon RDS (ej: xxx.us-east-1.rds.amazonaws.com)
+# - DB_NAME: Nombre de la base de datos en RDS
+# - DB_USER: Usuario de RDS
+# - DB_PASSWORD: Contraseña de RDS
+# - REDIS_URL: Endpoint de Redis (ElastiCache o EC2 con Redis)
+# - JWT_SECRET: Secret para JWT (debe ser el mismo en todas las instancias)
+
 services:
+  
   redis:
     image: redis:7-alpine
     container_name: anb_redis
@@ -18,12 +39,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.4'     # 20 de CPU para Redis
-          memory: 384M    # 384MB para Redis (20 de 2GB)
+          cpus: '0.4'
+          memory: 384M
         reservations:
-          cpus: '0.1'     # 0.05 CPU mínimo
-          memory: 128M    # 128MB mínimo
+          cpus: '0.1'
+          memory: 128M
+    restart: unless-stopped
 
+  # API REST - Capa Web que escala automáticamente
   api:
     build:
       context: ./back
@@ -37,60 +60,102 @@ services:
       - TZ=America/Bogota
       - PORT=8080
       - HOST=0.0.0.0
-      - GIN_MODE=debug
+      - GIN_MODE=release
+      - ENVIRONMENT=production
 
-      # Database configuration
+      # Database - Amazon RDS PostgreSQL
       - DB_DRIVER=postgres
-      - DB_HOST=171.21.2.60 # IP DE BASE DE DATOS EN AWS
+      - DB_HOST=${DB_HOST:-postgres}
       - DB_PORT=5432
-      - DB_NAME=proyecto_1
-      - DB_USER=usrpostgres
-      - DB_PASSWORD=password
-      - DB_SSL_MODE=disable
+      - DB_NAME=${DB_NAME:-proyecto_1}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
 
-      - REDIS_URL=redis:6379
-      - JWT_SECRET=local-development-secret-key
+      # Redis - Local o ElastiCache
+      - REDIS_URL=${REDIS_URL:-redis:6379}
+
+      # JWT - IMPORTANTE: Mismo secret en todas las instancias
+      - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRATION=1h
+
+      # Storage - Amazon S3
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_UPLOAD_PREFIX=${S3_UPLOAD_PREFIX:-uploads}
+      - S3_PROCESSED_PREFIX=${S3_PROCESSED_PREFIX:-processed}
+
+      # Legacy paths (no se usan con S3, pero se mantienen para compatibilidad)
       - UPLOAD_PATH=/app/uploads
       - PROCESSED_PATH=/app/processed
-      - MAX_FILE_SIZE=104857600
-      - WORKER_CONCURRENCY=8
+
+      # Limits
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}
+      
+      # Video processing settings
+      - MAX_VIDEO_DURATION=${MAX_VIDEO_DURATION:-104857600}
+      - OUTPUT_RESOLUTION=${OUTPUT_RESOLUTION:-1280x720}
+      - OUTPUT_ASPECT_RATIO=${OUTPUT_ASPECT_RATIO:-16:9}
+
+      # Worker - Las instancias API NO procesan videos
+      - WORKER_CONCURRENCY=0
+      - WORKER_MODE=false
+    
+    # Almacenamiento en local
     volumes:
-      - /mnt/nfs/uploads:/app/uploads
-      - /mnt/nfs/processed:/app/processed
+      - video_uploads:/app/uploads
+      - video_processed:/app/processed
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - anb_network
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: '1.5'     # 0.75 de CPU para API (en Web Server)
-          memory: 1536M   # 0.75 de RAM para API (1.5GB)
+          cpus: '1.5'
+          memory: 1536M
         reservations:
-          cpus: '0.8'     # Garantizar 0.40 CPU mínimo
-          memory: 768M    # Garantizar 768MB mínimo
+          cpus: '0.8'
+          memory: 768M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
+  # Frontend - React App
   frontend:
     build:
       context: ./front
       dockerfile: Dockerfile
       args:
-      - VITE_API_URL=http://3.227.188.83
-      - VITE_VIDEOS_URL=http://3.227.188.83
-      - VITE_APP_NAME=ANB Rising Stars Showcase
-      - VITE_APP_VERSION=1.0.0
-      - VITE_ENVIRONMENT=development
+        - VITE_API_URL=${ELB_DNS_NAME:-http://localhost}
+        - VITE_VIDEOS_URL=${ELB_DNS_NAME:-http://localhost}
+        - VITE_APP_NAME=ANB Rising Stars Showcase
+        - VITE_APP_VERSION=1.0.0
+        - VITE_ENVIRONMENT=production
     container_name: anb_frontend
-    ports:
-      - "3000:3000"
+    env_file:
+      - ./front/.env
     environment:
       - TZ=America/Bogota
     networks:
       - anb_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # Nginx - Reverse Proxy
   nginx:
     image: nginx:alpine
     container_name: anb_nginx
@@ -100,18 +165,34 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./back/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - /mnt/nfs/processed:/usr/share/nginx/html/videos:ro
+      - ./back/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - video_processed:/usr/share/nginx/html/videos:ro
     depends_on:
       - api
       - frontend
     networks:
       - anb_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   redis_data:
+  # Almacenamiento en local
+  video_uploads:
+  video_processed:
 
 networks:
   anb_network:
-    driver: bridge
+    external: true

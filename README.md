@@ -246,5 +246,17 @@ docker compose -f docker-compose.local.yml up -d
 > Para la Entrega 2, se realizo el uso de AWS mediante servicios de EC2, en los cuales se desplegaron los servicios de la aplicación.
 
 Con el fin de crear los objetos necesarios en EC2, se segmento el docker compose en archivos separados:
+- Para la base de datos, se creo el archivo `docker-compose.bd.yml` con la creación de objetos para el funcionamiento de la aplicación.
+```
+docker compose -f docker-compose.bd.yml --env-file back/.env up -d
+```
+
 - Para el despliegue del backend, se creo el archivo `docker-compose.api.yml` con la información y objetos necesarios para la misma.
+```
+docker compose -f docker-compose.api.yml --env-file back/.env up -d
+```
+
 - Para el despligue del worker, se creo el archivo `docker-compose.worker.yml` con los recursos respectivos para la ejecución de este.
+```
+docker compose -f docker-compose.worker.yml --env-file back/.env up -d
+```

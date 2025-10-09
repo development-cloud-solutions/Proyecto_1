@@ -29,9 +29,16 @@ type Config struct {
 	JWTExpiration time.Duration
 
 	// File Storage
+	StorageType   string // "local" or "s3"
 	UploadPath    string
 	ProcessedPath string
 	MaxFileSize   int64
+
+	// AWS S3 Configuration
+	AWSRegion         string
+	S3BucketName      string
+	S3UploadPrefix    string
+	S3ProcessedPrefix string
 
 	// Video Processing
 	MaxVideoDuration  int
@@ -60,9 +67,16 @@ func Load() *Config {
 		JWTSecret:     getEnv("JWT_SECRET", "local-development-secret-key"),
 		JWTExpiration: getDurationEnv("JWT_EXPIRATION", "24h"),
 
+		StorageType:   getEnv("STORAGE_TYPE", "local"), // "local" or "s3"
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),
 		ProcessedPath: getEnv("PROCESSED_PATH", "./processed"),
 		MaxFileSize:   getInt64Env("MAX_FILE_SIZE", "104857600"), // 100MB
+
+		// AWS S3 Configuration
+		AWSRegion:         getEnv("AWS_REGION", "us-east-1"),
+		S3BucketName:      getEnv("S3_BUCKET_NAME", ""),
+		S3UploadPrefix:    getEnv("S3_UPLOAD_PREFIX", "uploads"),
+		S3ProcessedPrefix: getEnv("S3_PROCESSED_PREFIX", "processed"),
 
 		MaxVideoDuration:  getIntEnv("MAX_VIDEO_DURATION", "30"),
 		OutputResolution:  getEnv("OUTPUT_RESOLUTION", "1280x720"),
