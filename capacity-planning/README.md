@@ -73,7 +73,7 @@ Encolar **100 tareas de procesamiento de video** simultáneamente y esperar hast
 **-n 500** → Número total de solicitudes que se van a enviar (500 requests en total).  
 **-c 50** → Número de solicitudes concurrentes (50 usuarios simultáneos).  
 
-`http://localhost:8080/api/public/videos` → URL del endpoint que se va a probar (en tu caso, listar videos).  
+`http://localhost/api/public/videos` → URL del endpoint que se va a probar (en tu caso, listar videos).  
 
 ---
 
