@@ -1,0 +1,15 @@
+# CloudFormation deployment artifacts
+deployment-info.txt
+parameters.json
+*.pem
+*.tar.gz
+deployment-package/
+s3-backup-*/
+
+# AWS credentials
+.aws/
+credentials
+
+# Temporary files
+*.log
+*.tmp

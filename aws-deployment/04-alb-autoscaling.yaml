@@ -1,0 +1,473 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ANB Rising Stars - Application Load Balancer and Auto Scaling Group for API Layer'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name prefix (must match other stacks)
+    Type: String
+    Default: anb-production
+
+  KeyPairName:
+    Description: EC2 Key Pair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair
+
+  APIInstanceType:
+    Description: EC2 instance type for API servers
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t2.micro
+      - t2.small
+      - t2.medium
+
+  LatestAmiId:
+    Description: Latest Amazon Linux 2023 AMI ID (leave default for auto-lookup)
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+  MinSize:
+    Description: Minimum number of instances in Auto Scaling Group
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  MaxSize:
+    Description: Maximum number of instances in Auto Scaling Group
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 10
+
+  DesiredCapacity:
+    Description: Desired number of instances in Auto Scaling Group
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  CPUTargetValue:
+    Description: Target CPU utilization for scaling policy (percentage)
+    Type: Number
+    Default: 70
+    MinValue: 40
+    MaxValue: 90
+
+  JWTSecret:
+    Description: JWT secret for authentication (must be same across all instances)
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    ConstraintDescription: Must be at least 32 characters
+
+  DBPassword:
+    Description: Database password
+    Type: String
+    NoEcho: true
+
+  DBHost:
+    Description: Database endpoint address
+    Type: String
+
+  DBName:
+    Description: Database name
+    Type: String
+    Default: proyecto_1
+
+  DBUsername:
+    Description: Database username
+    Type: String
+    Default: postgres
+
+  S3BucketName:
+    Description: S3 bucket name for video storage
+    Type: String
+
+  DeploymentPackageS3Key:
+    Description: S3 key for deployment package (e.g., deployments/latest/app.tar.gz)
+    Type: String
+    Default: deployments/latest/app.tar.gz
+
+Resources:
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${EnvironmentName}-alb'
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet1'
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet2'
+      SecurityGroups:
+        - Fn::ImportValue: !Sub '${EnvironmentName}-ALBSecurityGroup'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-alb'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Target Group for API Instances
+  APITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${EnvironmentName}-api-tg'
+      Port: 80
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCId'
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /health
+      HealthCheckPort: '80'
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10  # Aumentado de 5 a 10 segundos
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 5     # Aumentado de 3 a 5 (permite 5 fallos antes de marcar unhealthy)
+      Matcher:
+        HttpCode: '200'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+        - Key: stickiness.enabled
+          Value: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-api-tg'
+
+  # ALB Listener (HTTP)
+  ALBListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref APITargetGroup
+
+  # Launch Template for API Instances
+  APILaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${EnvironmentName}-api-launch-template'
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: !Ref APIInstanceType
+        KeyName: !Ref KeyPairName
+        IamInstanceProfile:
+          Name: LabInstanceProfile
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${EnvironmentName}-APISecurityGroup'
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 30
+              VolumeType: gp3
+              DeleteOnTermination: true
+              Encrypted: true
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            # IMPORTANTE: NO usar 'set -e' porque queremos que el script continúe
+            # incluso si hay errores, para poder hacer debugging
+            exec > >(tee /var/log/user-data.log)
+            exec 2>&1
+
+            echo "=========================================="
+            echo "Iniciando configuración de instancia API"
+            echo "Hora: $(date)"
+            echo "Región: ${AWS::Region}"
+            echo "S3 Bucket: ${S3BucketName}"
+            echo "=========================================="
+
+            # Actualizar sistema
+            yum update -y
+            yum install -y docker git wget
+
+            # Instalar cliente de postgres
+            yum install -y postgresql15
+            
+            #dnf update -y
+            #dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
+            #dnf -y install dnf-plugins-core
+            #dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            #sed -i 's/$releasever/9/g' /etc/yum.repos.d/docker-ce.repo
+            #dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+            # Iniciar Docker
+            systemctl enable docker
+            systemctl start docker
+
+            # Agregar ec2-user al grupo docker para evitar 'permission denied'
+            usermod -aG docker ec2-user
+
+            # Instalar Docker Compose
+            curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+
+            # Instalar AWS CLI v2
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            ./aws/install
+            rm -rf aws awscliv2.zip
+
+            # Crear directorio de aplicación
+            APP_DIR="/opt/anb-app"
+            mkdir -p ${!APP_DIR}
+            cd ${!APP_DIR}
+
+            # Descargar código desde S3
+            S3_BUCKET="${S3BucketName}"
+            S3_KEY="${DeploymentPackageS3Key}"
+
+            echo "Verificando que app.tar.gz existe en S3..."
+            if aws s3 ls "s3://${!S3_BUCKET}/${!S3_KEY}" --region ${AWS::Region} > /dev/null 2>&1; then
+                echo "✓ Archivo encontrado en s3://${!S3_BUCKET}/${!S3_KEY}"
+                aws s3 cp "s3://${!S3_BUCKET}/${!S3_KEY}" app.tar.gz --region ${AWS::Region}
+                tar -xzf app.tar.gz
+                rm app.tar.gz
+                echo "✓ Código descargado y extraído correctamente"
+            else
+                echo "✗ ERROR CRÍTICO: app.tar.gz NO existe en S3"
+                echo "Ubicación esperada: s3://${!S3_BUCKET}/${!S3_KEY}"
+                echo ""
+                echo "SOLUCIÓN:"
+                echo "  1. Ejecuta: cd /path/to/proyecto && ./aws-deployment/cloudformation/deploy.sh --fix anb-production-master"
+                echo "  2. O sube manualmente: aws s3 cp app.tar.gz s3://${!S3_BUCKET}/${!S3_KEY}"
+                echo ""
+                echo "La instancia permanecerá activa para debugging. Revisa este log en:"
+                echo "  tail -f /var/log/user-data.log"
+                echo ""
+                echo "Terminando script user-data (instancia quedará unhealthy)..."
+                exit 0  # Exit 0 para que la instancia no se marque como 'failed to launch'
+            fi
+
+            # Crear red Docker
+            docker network create anb_network || true
+
+            # Configurar variables de entorno
+            cat > ${!APP_DIR}/.env << 'EOF'
+            # AWS Configuration
+            AWS_REGION=${AWS::Region}
+            S3_BUCKET_NAME=${S3BucketName}
+            S3_UPLOAD_PREFIX=uploads
+            S3_PROCESSED_PREFIX=processed
+
+            # Database Configuration
+            DB_HOST=${DBHost}
+            DB_PORT=5432
+            DB_NAME=${DBName}
+            DB_USER=${DBUsername}
+            DB_PASSWORD=${DBPassword}
+            DB_SSL_MODE=require
+
+            # Redis Configuration (local)
+            REDIS_URL=redis:6379
+
+            # JWT Configuration
+            JWT_SECRET=${JWTSecret}
+            JWT_EXPIRATION=24h
+
+            # Application Configuration
+            STORAGE_TYPE=s3
+            GIN_MODE=release
+            ENVIRONMENT=production
+            WORKER_CONCURRENCY=0
+            WORKER_MODE=false
+
+            # ELB Configuration
+            ELB_DNS_NAME=http://${ApplicationLoadBalancer.DNSName}
+
+            # Limits
+            MAX_FILE_SIZE=104857600
+            MAX_VIDEO_DURATION=30
+            OUTPUT_RESOLUTION=1280x720
+            OUTPUT_ASPECT_RATIO=16:9
+            EOF
+
+            # Copiar .env a back/
+            mkdir -p ${!APP_DIR}/back
+            cp ${!APP_DIR}/.env ${!APP_DIR}/back/.env
+
+            # Construir y levantar servicios
+            # Deshabilitar BuildKit para compatibilidad con Amazon Linux 2023
+            export DOCKER_BUILDKIT=0
+            export COMPOSE_DOCKER_CLI_BUILD=0
+
+            docker-compose -f docker-compose.api.yml build --no-cache
+            docker-compose -f docker-compose.api.yml up -d
+
+            # Health check
+            echo "Esperando que los servicios estén listos..."
+            sleep 30
+
+            MAX_RETRIES=30
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                if curl -f http://localhost/health > /dev/null 2>&1; then
+                    echo "✓ API está respondiendo correctamente"
+                    break
+                fi
+                echo "Esperando que la API esté lista... intento $((RETRY_COUNT+1))/${!MAX_RETRIES}"
+                sleep 10
+                RETRY_COUNT=$((RETRY_COUNT+1))
+            done
+
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                echo "✗ ERROR: La API no respondió después de ${!MAX_RETRIES} intentos"
+                echo "Mostrando logs de Docker Compose para debugging:"
+                docker-compose -f docker-compose.api.yml logs --tail=100
+                echo ""
+                echo "ADVERTENCIA: Los servicios no están respondiendo correctamente"
+                echo "La instancia permanecerá activa para debugging pero será marcada unhealthy por el ELB"
+                echo "Conéctate via SSH y revisa: tail -f /var/log/user-data.log"
+                # NO hacer exit 1 - dejar que la instancia viva para debugging
+                # El ELB health check la marcará como unhealthy automáticamente
+            fi
+
+            echo "=========================================="
+            echo "Configuración completada exitosamente"
+            echo "=========================================="
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${EnvironmentName}-api-instance'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+              - Key: Type
+                Value: API
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: !Sub '${EnvironmentName}-api-volume'
+
+  # Auto Scaling Group
+  APIAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn:
+      - ALBListenerHTTP
+    Properties:
+      AutoScalingGroupName: !Sub '${EnvironmentName}-api-asg'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref APILaunchTemplate
+        Version: !GetAtt APILaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 600  # 10 minutos - dar tiempo para download y build
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet1'
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet2'
+      TargetGroupARNs:
+        - !Ref APITargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-api-asg'
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref EnvironmentName
+          PropagateAtLaunch: true
+
+  # Auto Scaling Policy - Target Tracking (CPU)
+  CPUScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref APIAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref CPUTargetValue
+
+  # CloudWatch Alarms
+  HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-asg-high-cpu'
+      AlarmDescription: Alert when ASG average CPU exceeds 80%
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref APIAutoScalingGroup
+
+  UnhealthyHostAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-unhealthy-hosts'
+      AlarmDescription: Alert when there are unhealthy targets
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !GetAtt APITargetGroup.TargetGroupFullName
+
+  HighResponseTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-high-response-time'
+      AlarmDescription: Alert when response time exceeds 500ms
+      MetricName: TargetResponseTime
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+
+Outputs:
+  LoadBalancerDNS:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${EnvironmentName}-ALBDNSName'
+
+  LoadBalancerArn:
+    Description: ARN of the Application Load Balancer
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub '${EnvironmentName}-ALBArn'
+
+  LoadBalancerURL:
+    Description: URL of the Application Load Balancer
+    Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}'
+
+  TargetGroupArn:
+    Description: ARN of the Target Group
+    Value: !Ref APITargetGroup
+    Export:
+      Name: !Sub '${EnvironmentName}-APITargetGroupArn'
+
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group
+    Value: !Ref APIAutoScalingGroup
+    Export:
+      Name: !Sub '${EnvironmentName}-ASGName'
+
+  LaunchTemplateId:
+    Description: ID of the Launch Template
+    Value: !Ref APILaunchTemplate
+    Export:
+      Name: !Sub '${EnvironmentName}-LaunchTemplateId'
