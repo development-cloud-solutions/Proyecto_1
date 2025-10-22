@@ -90,6 +90,14 @@ Parameters:
     Type: String
     Default: deployments/latest/app.tar.gz
 
+  RedisUrl:
+    Description: ElastiCache Redis endpoint (host:port)
+    Type: String
+
+  InstanceSecurityGroup:
+    Description: Security Group ID for EC2 instances
+    Type: String
+
 Resources:
   # Application Load Balancer
   ApplicationLoadBalancer:
@@ -162,7 +170,7 @@ Resources:
         IamInstanceProfile:
           Name: LabInstanceProfile
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${EnvironmentName}-APISecurityGroup'
+          - !Ref InstanceSecurityGroup
         BlockDeviceMappings:
           - DeviceName: /dev/xvda
             Ebs:
@@ -266,8 +274,8 @@ Resources:
             DB_PASSWORD=${DBPassword}
             DB_SSL_MODE=require
 
-            # Redis Configuration (local)
-            REDIS_URL=redis:6379
+            # Redis Configuration (ElastiCache)
+            REDIS_URL=${RedisUrl}
 
             # JWT Configuration
             JWT_SECRET=${JWTSecret}

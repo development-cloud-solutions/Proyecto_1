@@ -241,7 +241,7 @@ docker compose -f docker-compose.local.yml up -d
   - Archivo JSON de pruebas en postman `anb.json`
 
 
-# Despliegue en AWS
+# Entrega 2 :: Despliegue en AWS
 
 > Para la Entrega 2, se realizo el uso de AWS mediante servicios de EC2, en los cuales se desplegaron los servicios de la aplicación.
 
@@ -260,3 +260,102 @@ docker compose -f docker-compose.api.yml --env-file back/.env up -d
 ```
 docker compose -f docker-compose.worker.yml --env-file back/.env up -d
 ```
+
+# Entrega 3 :: Despliegue en AWS
+
+> Para la entrega 3, se realizo el uso de servicios de AWS como EC2, ALB, RDS, S3.
+
+Con el fin de facilitar el despliegue se creo un script automatizado en `CloudFormation`, con el cual se crean los servicios necesarios para el despliegue.
+
+**NOTA** Se debe tener instalado AWS CLI en la máquina de despliegue
+
+- Generar la llave para conexión
+```bash
+# Crear un nuevo Key Pair
+aws ec2 create-key-pair \
+  --key-name anb-keypair \
+  --query 'KeyMaterial' \
+  --output text > anb-keypair.pem
+
+# Proteger el archivo
+chmod 400 anb-keypair.pem
+```
+
+- Generar password
+```bash
+# Generar JWT secret
+JWT_SECRET=$(openssl rand -hex 32)
+
+# Generar DB password (Modificar para producción)
+DB_PASSWORD="MySecurePassword123!"
+```
+
+- Ejecutar desde la raíz del proyecto `Proyecto_1`:
+```bash
+./aws-deployment/deploy.sh anb-production anb-keypair "$DB_PASSWORD" "$JWT_SECRET"
+```
+
+Al finalizar el despligue se debe presentar un mensaje similar al siguiente:
+```bash
+[INFO] Desplegando CloudFormation stack: anb-production-master
+[INFO] Stack Name: anb-production-master
+[INFO] Templates Bucket: anb-cf-templates-xxxxx-us-east-1
+[INFO] Region: us-east-1
+[INFO] Creando nuevo stack...
+{
+    "StackId": "arn:aws:cloudformation:us-east-1:xxxxx:stack/anb-production-master/xxxxx-af18-11f0-b155-xxxxx"
+}
+[INFO] Esperando a que el stack se cree (esto puede tomar 10-15 minutos)...
+[SUCCESS] Stack desplegado exitosamente!
+
+[INFO] Obteniendo información del stack...
+[INFO] Verificando estado del Auto Scaling Group...
+[INFO] Instancias en ASG: 1/1 healthy
+[SUCCESS] ✓ Instancias healthy: 1/1
+[INFO] Para ejecutar las migraciones de base de datos, conéctate a RDS y ejecuta:
+[INFO] Endpoint: anb-production-postgres.xxxxx.us-east-1.rds.amazonaws.com
+[INFO] Database: proyecto_1
+[INFO] User: postgres
+[INFO]
+[INFO] Comando:
+[INFO]   for file in db/*.up.sql; do
+[INFO]     psql -h anb-production-postgres.xxxxx.us-east-1.rds.amazonaws.com -U postgres -d proyecto_1 -f "$file"
+[INFO]   done
+
+
+==========================================
+[SUCCESS] DESPLIEGUE COMPLETADO
+==========================================
+
+[INFO] Stack Name: anb-production-master
+[INFO] S3 Bucket: anb-videos-xxxxx-us-east-1
+[INFO] Application URL: http://anb-production-alb-xxxxx.us-east-1.elb.amazonaws.com
+[INFO] Database Endpoint: anb-production-postgres.xxxxx.us-east-1.rds.amazonaws.com
+
+```
+
+Una vez la infraestructura se ha desplegado correctamente se evidencia en el log, el acceso a las diferentes URL. Ingresar a la máquina EC2 del API y ejecutar (cuando se solicite el password de la base de datos es la configurada en el paso anterior en la variable `DB_PASSWORD`)
+```bash
+# EC2 - Ingresar a la carpeta de la aplicacíón
+cd /opt/anb-app/
+
+# Ejecutar la instalación de scripts en RDS, reemplazar URL_RDS por la conexión a BD
+for file in db/*.up.sql; do
+  psql -h anb-production-postgres.xxxx.us-east-1.rds.amazonaws.com -U postgres -d proyecto_1 -f "$file"
+done
+```
+
+- Para la eliminación de la infraestructura creada ejecutar, desde la raíz del proyecto `Proyecto_1` 
+```bash
+./aws-deployment/cleanup.sh anb-production
+```
+
+> Para más información sobre el despliegue automatica remitirse al `README.md` de la carpeta `aws-deployment`
+
+
+# Sustentación
+
+Vídeos de sustentación
+- Entrega 1 => `sustentacion\Entrega_1\README.md`
+- Entrega 2 => `sustentacion\Entrega_2\README.md`
+- Entrega 3 => `sustentacion\Entrega_3\README.md`

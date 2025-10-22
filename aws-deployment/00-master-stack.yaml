@@ -37,6 +37,10 @@ Metadata:
           - NumberOfWorkers
           - WorkerConcurrency
       - Label:
+          default: ElastiCache Configuration
+        Parameters:
+          - RedisCacheNodeType
+      - Label:
           default: Network Configuration
         Parameters:
           - VpcCIDR
@@ -191,7 +195,7 @@ Resources:
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/cloudformation/01-vpc-networking.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/01-vpc-networking.yaml'
         - './01-vpc-networking.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
@@ -204,14 +208,72 @@ Resources:
         - Key: Name
           Value: !Sub '${EnvironmentName}-vpc-stack'
 
-  # 2. S3 and IAM
+  # 2. Security Group for EC2 Instances (needed by ElastiCache)
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPCStack
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-ec2-sg
+      GroupDescription: Security group for EC2 instances (API and Workers)
+      VpcId: !GetAtt VPCStack.Outputs.VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from anywhere (for ALB and direct access)
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+          Description: API port for ALB health checks
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from anywhere
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH from anywhere
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ec2-sg
+
+  # Security Group Ingress Rules to allow EC2SecurityGroup access to data layer
+  RDSIngressFromEC2:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn:
+      - VPCStack
+      - EC2SecurityGroup
+    Properties:
+      GroupId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-RDSSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref EC2SecurityGroup
+      Description: Allow PostgreSQL from shared EC2 Security Group
+
+  # Allow EC2SecurityGroup to receive responses from RDS/Redis
+  EC2IngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EC2SecurityGroup
+      Description: Allow traffic between EC2 instances in same security group
+
+  # 3. S3 and IAM
   S3IAMStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/cloudformation/03-s3-iam.yaml'
-        - './03-s3-iam.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/02-s3-iam.yaml'
+        - './02-s3-iam.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         S3BucketName: ''  # Auto-generate
@@ -220,7 +282,28 @@ Resources:
         - Key: Name
           Value: !Sub '${EnvironmentName}-s3-iam-stack'
 
-  # 3. RDS Database
+  # 4. ElastiCache Redis
+  ElastiCacheStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+      - EC2SecurityGroup
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/03-elasticache.yaml'
+        - './03-elasticache.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcId: !GetAtt VPCStack.Outputs.VPCId
+        PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnets
+        InstanceSecurityGroup: !Ref EC2SecurityGroup
+        KeyPairName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-elasticache-stack'
+
+  # 5. RDS Database
   RDSStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
@@ -228,8 +311,8 @@ Resources:
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/cloudformation/02-rds-database.yaml'
-        - './02-rds-database.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/04-rds-database.yaml'
+        - './04-rds-database.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         DBInstanceClass: !Ref DBInstanceClass
@@ -243,18 +326,20 @@ Resources:
         - Key: Name
           Value: !Sub '${EnvironmentName}-rds-stack'
 
-  # 4. ALB and Auto Scaling Group
+  # 6. ALB and Auto Scaling Group
   ALBAutoScalingStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
       - VPCStack
       - S3IAMStack
       - RDSStack
+      - ElastiCacheStack
+      - EC2SecurityGroup
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/cloudformation/04-alb-autoscaling.yaml'
-        - './04-alb-autoscaling.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/05-alb-autoscaling.yaml'
+        - './05-alb-autoscaling.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         KeyPairName: !Ref KeyPairName
@@ -270,23 +355,27 @@ Resources:
         DBUsername: !Ref DBUsername
         S3BucketName: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
         DeploymentPackageS3Key: !Ref DeploymentPackageS3Key
+        RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+        InstanceSecurityGroup: !Ref EC2SecurityGroup
       Tags:
         - Key: Name
           Value: !Sub '${EnvironmentName}-alb-asg-stack'
 
-  # 5. Worker Instances
+  # 7. Worker Instances
   WorkersStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
       - VPCStack
       - S3IAMStack
       - RDSStack
+      - ElastiCacheStack
       - ALBAutoScalingStack
+      - EC2SecurityGroup
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/cloudformation/05-workers.yaml'
-        - './05-workers.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/06-workers.yaml'
+        - './06-workers.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         KeyPairName: !Ref KeyPairName
@@ -299,6 +388,8 @@ Resources:
         DBUsername: !Ref DBUsername
         S3BucketName: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
         DeploymentPackageS3Key: !Ref DeploymentPackageS3Key
+        RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+        InstanceSecurityGroup: !Ref EC2SecurityGroup
       Tags:
         - Key: Name
           Value: !Sub '${EnvironmentName}-workers-stack'
@@ -322,6 +413,15 @@ Outputs:
   DBConnectionString:
     Description: Database connection string (without password)
     Value: !GetAtt RDSStack.Outputs.DBConnectionString
+
+  # ElastiCache Outputs
+  RedisEndpoint:
+    Description: ElastiCache Redis endpoint
+    Value: !GetAtt ElastiCacheStack.Outputs.RedisEndpoint
+
+  RedisUrl:
+    Description: Complete Redis URL (host:port)
+    Value: !GetAtt ElastiCacheStack.Outputs.RedisUrl
 
   # Application Outputs
   ApplicationURL:

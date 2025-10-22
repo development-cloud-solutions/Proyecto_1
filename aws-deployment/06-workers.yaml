@@ -71,6 +71,14 @@ Parameters:
     Type: String
     Default: deployments/latest/app.tar.gz
 
+  RedisUrl:
+    Description: ElastiCache Redis endpoint (host:port)
+    Type: String
+
+  InstanceSecurityGroup:
+    Description: Security Group ID for EC2 instances
+    Type: String
+
 Conditions:
   CreateWorker2: !Or
     - !Equals [!Ref NumberOfWorkers, 2]
@@ -87,7 +95,7 @@ Resources:
       KeyName: !Ref KeyPairName
       IamInstanceProfile: LabInstanceProfile
       SecurityGroupIds:
-        - Fn::ImportValue: !Sub '${EnvironmentName}-WorkerSecurityGroup'
+        - !Ref InstanceSecurityGroup
       SubnetId:
         Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet1'
       BlockDeviceMappings:
@@ -163,8 +171,8 @@ Resources:
           DB_PASSWORD=${DBPassword}
           DB_SSL_MODE=require
 
-          # Redis Configuration (conectar a instancia API)
-          REDIS_URL=redis:6379
+          # Redis Configuration (ElastiCache)
+          REDIS_URL=${RedisUrl}
 
           # Worker Configuration
           WORKER_MODE=true
@@ -186,6 +194,10 @@ Resources:
           cp ${!APP_DIR}/.env ${!APP_DIR}/back/.env
 
           # Construir y levantar worker
+          # Deshabilitar BuildKit para compatibilidad con Amazon Linux 2023
+          export DOCKER_BUILDKIT=0
+          export COMPOSE_DOCKER_CLI_BUILD=0
+          
           docker-compose -f docker-compose.worker.yml build --no-cache
           docker-compose -f docker-compose.worker.yml up -d
 
@@ -223,7 +235,7 @@ Resources:
       KeyName: !Ref KeyPairName
       IamInstanceProfile: LabInstanceProfile
       SecurityGroupIds:
-        - Fn::ImportValue: !Sub '${EnvironmentName}-WorkerSecurityGroup'
+        - !Ref InstanceSecurityGroup
       SubnetId:
         Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet2'
       BlockDeviceMappings:
@@ -296,8 +308,8 @@ Resources:
           DB_PASSWORD=${DBPassword}
           DB_SSL_MODE=disable
 
-          # Redis Configuration (conectar a instancia API)
-          REDIS_URL=redis:6379
+          # Redis Configuration (ElastiCache)
+          REDIS_URL=${RedisUrl}
 
           # Worker Configuration
           WORKER_MODE=true

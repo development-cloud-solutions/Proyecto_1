@@ -304,6 +304,12 @@ Outputs:
     Export:
       Name: !Sub '${EnvironmentName}-PrivateSubnet2'
 
+  PrivateSubnets:
+    Description: Comma-delimited list of private subnet IDs
+    Value: !Join [',', [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+    Export:
+      Name: !Sub '${EnvironmentName}-PrivateSubnets'
+
   ALBSecurityGroupId:
     Description: Security Group ID for ALB
     Value: !Ref ALBSecurityGroup

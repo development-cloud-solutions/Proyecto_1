@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ElastiCache Redis cluster for ANB video processing queue'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name prefix
+    Type: String
+    Default: anb-production
+
+  VpcId:
+    Description: VPC ID where ElastiCache will be deployed
+    Type: String
+
+  PrivateSubnetIds:
+    Description: Comma-separated list of private subnet IDs
+    Type: CommaDelimitedList
+
+  InstanceSecurityGroup:
+    Description: Security Group ID of EC2 instances that need access to Redis
+    Type: String
+
+  NodeType:
+    Description: ElastiCache node type
+    Type: String
+    Default: cache.t3.micro
+    AllowedValues:
+      - cache.t2.micro
+      - cache.t3.micro
+      - cache.t3.small
+      - cache.t3.medium
+
+  NumCacheNodes:
+    Description: Number of cache nodes (1 for single node, use replication for HA)
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 1
+
+Resources:
+  # Security Group para ElastiCache Redis
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-redis-sg
+      GroupDescription: Security group for ElastiCache Redis cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Permitir tráfico desde las instancias EC2 (API y Workers)
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref InstanceSecurityGroup
+          Description: Allow Redis access from EC2 instances
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-redis-sg
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Subnet Group para ElastiCache
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Sub ${EnvironmentName}-redis-subnet-group
+      Description: Subnet group for ANB Redis cluster
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-redis-subnet-group
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # ElastiCache Redis Cluster
+  RedisCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    DependsOn: RedisSubnetGroup
+    Properties:
+      CacheClusterId: !Sub '${EnvironmentName}-rd'
+      Engine: redis
+      EngineVersion: '6.2'
+      CacheNodeType: !Ref NodeType
+      NumCacheNodes: !Ref NumCacheNodes
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      PreferredMaintenanceWindow: sun:05:00-sun:06:00
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-redis
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  RedisEndpoint:
+    Description: ElastiCache Redis endpoint address
+    Value: !GetAtt RedisCluster.RedisEndpoint.Address
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-endpoint
+
+  RedisPort:
+    Description: ElastiCache Redis port
+    Value: !GetAtt RedisCluster.RedisEndpoint.Port
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-port
+
+  RedisUrl:
+    Description: Complete Redis URL for application configuration
+    Value: !Sub '${RedisCluster.RedisEndpoint.Address}:${RedisCluster.RedisEndpoint.Port}'
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-url
+
+  RedisSecurityGroupId:
+    Description: Security Group ID for Redis cluster
+    Value: !Ref RedisSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-sg-id
+
+  RedisClusterId:
+    Description: ElastiCache Redis Cluster ID
+    Value: !Ref RedisCluster
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-cluster-id

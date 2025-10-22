@@ -8,7 +8,7 @@ set -e
 # CONFIGURACIÓN
 # ==========================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Colores para output
 RED='\033[0;31m'
@@ -242,10 +242,10 @@ echo ""
 
 # Subir templates a S3
 log_info "Subiendo templates de CloudFormation a S3..."
-aws s3 sync "${SCRIPT_DIR}/" "s3://${TEMPLATES_BUCKET}/cloudformation/" \
-    --exclude "*.sh" \
-    --exclude "*.md" \
-    --exclude "README.md"
+aws s3 sync "${SCRIPT_DIR}/" "s3://${TEMPLATES_BUCKET}/" \
+    --exclude "*" \
+    --include "*.yaml" \
+    --include "*.yml"
 
 log_success "Templates subidos a S3"
 echo ""
@@ -356,7 +356,7 @@ if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" &> /dev/null;
         log_info "Actualizando stack..."
         aws cloudformation update-stack \
             --stack-name "${STACK_NAME}" \
-            --template-url "https://${TEMPLATES_BUCKET}.s3.amazonaws.com/cloudformation/00-master-stack.yaml" \
+            --template-url "https://${TEMPLATES_BUCKET}.s3.amazonaws.com/00-master-stack.yaml" \
             --parameters \
                 ParameterKey=EnvironmentName,ParameterValue="${ENVIRONMENT_NAME}" \
                 ParameterKey=KeyPairName,ParameterValue="${KEY_PAIR_NAME}" \
@@ -375,7 +375,7 @@ else
     log_info "Creando nuevo stack..."
     aws cloudformation create-stack \
         --stack-name "${STACK_NAME}" \
-        --template-url "https://${TEMPLATES_BUCKET}.s3.amazonaws.com/cloudformation/00-master-stack.yaml" \
+        --template-url "https://${TEMPLATES_BUCKET}.s3.amazonaws.com/00-master-stack.yaml" \
         --parameters \
             ParameterKey=EnvironmentName,ParameterValue="${ENVIRONMENT_NAME}" \
             ParameterKey=KeyPairName,ParameterValue="${KEY_PAIR_NAME}" \

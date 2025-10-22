@@ -19,32 +19,34 @@
 # - JWT_SECRET: Secret para JWT (debe ser el mismo en todas las instancias)
 
 services:
-  
-  redis:
-    image: redis:7-alpine
-    container_name: anb_redis
-    environment:
-      - TZ=America/Bogota
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - anb_network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: '0.4'
-          memory: 384M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-    restart: unless-stopped
+
+  # NOTA: Redis local comentado - se usa ElastiCache en AWS
+  # Para desarrollo local, descomentar este servicio y cambiar REDIS_URL en .env a "redis:6379"
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: anb_redis
+  #   environment:
+  #     - TZ=America/Bogota
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - anb_network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.4'
+  #         memory: 384M
+  #       reservations:
+  #         cpus: '0.1'
+  #         memory: 128M
+  #   restart: unless-stopped
 
   # API REST - Capa Web que escala automáticamente
   api:
@@ -106,9 +108,9 @@ services:
     volumes:
       - video_uploads:/app/uploads
       - video_processed:/app/processed
-    depends_on:
-      redis:
-        condition: service_healthy
+    # depends_on: # Comentado para AWS - ya no usamos Redis local
+    #   redis:
+    #     condition: service_healthy
     networks:
       - anb_network
     restart: unless-stopped
@@ -188,7 +190,7 @@ services:
       retries: 3
 
 volumes:
-  redis_data:
+  # redis_data: # Comentado para AWS - ya no usamos Redis local
   # Almacenamiento en local
   video_uploads:
   video_processed:

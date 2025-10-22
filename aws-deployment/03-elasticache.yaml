@@ -1,0 +1,196 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Redis on EC2 instance (alternative to ElastiCache for AWS Academy)'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name prefix
+    Type: String
+    Default: anb-production
+
+  VpcId:
+    Description: VPC ID where Redis will be deployed
+    Type: String
+
+  PrivateSubnetIds:
+    Description: Comma-separated list of private subnet IDs
+    Type: CommaDelimitedList
+
+  InstanceSecurityGroup:
+    Description: Security Group ID of EC2 instances that need access to Redis
+    Type: String
+
+  KeyPairName:
+    Description: EC2 Key Pair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+
+  LatestAmiId:
+    Description: Latest Amazon Linux 2023 AMI ID
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  # Security Group para Redis
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-redis-sg
+      GroupDescription: Security group for Redis EC2 instance
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Permitir tráfico desde las instancias EC2 (API y Workers)
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref InstanceSecurityGroup
+          Description: Allow Redis access from EC2 instances
+        # SSH para debugging (opcional)
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH access
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-redis-sg
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Instancia EC2 con Redis
+  RedisInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.micro
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: LabInstanceProfile
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+        - !Ref InstanceSecurityGroup
+      SubnetId: !Select [0, !Ref PrivateSubnetIds]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 10
+            VolumeType: gp3
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          #set -e
+
+          # Logs
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+          echo "=== Redis Instance Setup Started ==="
+
+          # Actualizar sistema
+          yum update -y
+          yum install -y docker git wget
+
+          # Instalar Docker
+          systemctl start docker
+          systemctl enable docker
+
+          # Agregar ec2-user al grupo docker para evitar 'permission denied'
+          usermod -aG docker ec2-user
+
+          # Crear directorio para datos de Redis
+          mkdir -p /opt/redis/data
+          chmod 777 /opt/redis/data
+
+          # Instalar Docker Compose
+          curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
+          # Instalar AWS CLI v2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          rm -rf aws awscliv2.zip
+          
+          # Crear archivo de configuración de Redis
+          cat > /opt/redis/redis.conf << 'EOF'
+          bind 0.0.0.0
+          protected-mode no
+          port 6379
+          tcp-backlog 511
+          timeout 0
+          tcp-keepalive 300
+          daemonize no
+          supervised no
+          loglevel notice
+          databases 16
+          save 900 1
+          save 300 10
+          save 60 10000
+          stop-writes-on-bgsave-error yes
+          rdbcompression yes
+          rdbchecksum yes
+          dbfilename dump.rdb
+          dir /data
+          maxmemory 400mb
+          maxmemory-policy allkeys-lru
+          appendonly yes
+          appendfilename "appendonly.aof"
+          appendfsync everysec
+          EOF
+
+          # Deshabilitar BuildKit para compatibilidad con Amazon Linux 2023
+          export DOCKER_BUILDKIT=0
+          export COMPOSE_DOCKER_CLI_BUILD=0
+          
+          # Ejecutar Redis en Docker
+          docker run -d \
+            --name redis \
+            --restart unless-stopped \
+            -p 6379:6379 \
+            -v /opt/redis/data:/data \
+            -v /opt/redis/redis.conf:/usr/local/etc/redis/redis.conf \
+            redis:7-alpine redis-server /usr/local/etc/redis/redis.conf
+
+          # Verificar que Redis está corriendo
+          sleep 5
+          docker ps | grep redis || echo "ERROR: Redis no está corriendo"
+
+          # Instalar redis-cli para testing
+          dnf install -y redis
+
+          # Test de conexión
+          redis-cli -h localhost ping || echo "ERROR: Redis no responde"
+
+          echo "=== Redis Instance Setup Completed ==="
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-redis-instance
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  RedisEndpoint:
+    Description: Redis endpoint address (private IP)
+    Value: !GetAtt RedisInstance.PrivateIp
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-endpoint
+
+  RedisPort:
+    Description: Redis port
+    Value: 6379
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-port
+
+  RedisUrl:
+    Description: Complete Redis URL for application configuration
+    Value: !Sub '${RedisInstance.PrivateIp}:6379'
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-url
+
+  RedisSecurityGroupId:
+    Description: Security Group ID for Redis
+    Value: !Ref RedisSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-sg-id
+
+  RedisInstanceId:
+    Description: Redis EC2 Instance ID
+    Value: !Ref RedisInstance
+    Export:
+      Name: !Sub ${EnvironmentName}-redis-instance-id
