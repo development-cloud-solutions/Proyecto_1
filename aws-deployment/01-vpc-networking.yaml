@@ -258,13 +258,23 @@ Resources:
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          SourceSecurityGroupId: !Ref APISecurityGroup
-          Description: Allow PostgreSQL from API instances
+          CidrIp: !Ref PrivateSubnet1CIDR
+          Description: Allow PostgreSQL from Private Subnet 1
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          SourceSecurityGroupId: !Ref WorkerSecurityGroup
-          Description: Allow PostgreSQL from Worker instances
+          CidrIp: !Ref PrivateSubnet2CIDR
+          Description: Allow PostgreSQL from Private Subnet 2
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: !Ref PublicSubnet1CIDR
+          Description: Allow PostgreSQL from Public Subnet 1 (for API instances)
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: !Ref PublicSubnet2CIDR
+          Description: Allow PostgreSQL from Public Subnet 2 (for API instances)
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0

@@ -185,6 +185,12 @@ Parameters:
     Type: String
     Default: ''
 
+  # S3 Video Storage
+  VideoStorageBucketName:
+    Description: S3 bucket name for video storage (created by deploy.sh)
+    Type: String
+    Default: ''
+
 Conditions:
   UseS3Templates: !Not [!Equals [!Ref TemplateS3BucketName, '']]
 
@@ -241,31 +247,6 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-ec2-sg
 
-  # Security Group Ingress Rules to allow EC2SecurityGroup access to data layer
-  RDSIngressFromEC2:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn:
-      - VPCStack
-      - EC2SecurityGroup
-    Properties:
-      GroupId:
-        Fn::ImportValue: !Sub '${EnvironmentName}-RDSSecurityGroup'
-      IpProtocol: tcp
-      FromPort: 5432
-      ToPort: 5432
-      SourceSecurityGroupId: !Ref EC2SecurityGroup
-      Description: Allow PostgreSQL from shared EC2 Security Group
-
-  # Allow EC2SecurityGroup to receive responses from RDS/Redis
-  EC2IngressFromSelf:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroup
-    Properties:
-      GroupId: !Ref EC2SecurityGroup
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref EC2SecurityGroup
-      Description: Allow traffic between EC2 instances in same security group
-
   # 3. S3 and IAM
   S3IAMStack:
     Type: AWS::CloudFormation::Stack
@@ -276,7 +257,7 @@ Resources:
         - './02-s3-iam.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
-        S3BucketName: ''  # Auto-generate
+        S3BucketName: !Ref VideoStorageBucketName
         CreateBucket: 'false'  # El bucket ya existe (creado por deploy.sh)
       Tags:
         - Key: Name
@@ -297,6 +278,7 @@ Resources:
         EnvironmentName: !Ref EnvironmentName
         VpcId: !GetAtt VPCStack.Outputs.VPCId
         PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnets
+        PublicSubnetIds: !GetAtt VPCStack.Outputs.PublicSubnets
         InstanceSecurityGroup: !Ref EC2SecurityGroup
         KeyPairName: !Ref KeyPairName
       Tags:

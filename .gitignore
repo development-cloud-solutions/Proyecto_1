@@ -1673,3 +1673,5 @@ FodyWeavers.xsd
 
 # empaquetado para despliegue en AWS
 deployment-package/
+
+*.pem

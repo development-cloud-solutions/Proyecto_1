@@ -195,7 +195,7 @@ Resources:
 
             # Actualizar sistema
             yum update -y
-            yum install -y docker git wget
+            yum install -y docker git wget telnet
 
             # Instalar cliente de postgres
             yum install -y postgresql15
@@ -228,6 +228,25 @@ Resources:
             APP_DIR="/opt/anb-app"
             mkdir -p ${!APP_DIR}
             cd ${!APP_DIR}
+
+            # Esperar a que IAM Instance Profile esté disponible
+            echo "Esperando a que las credenciales de IAM estén disponibles..."
+            MAX_ATTEMPTS=30
+            ATTEMPT=0
+            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+                if aws sts get-caller-identity --region ${AWS::Region} > /dev/null 2>&1; then
+                    echo "✓ Credenciales de IAM disponibles"
+                    break
+                fi
+                ATTEMPT=$((ATTEMPT + 1))
+                echo "Intento $ATTEMPT/$MAX_ATTEMPTS - Esperando credenciales..."
+                sleep 10
+            done
+
+            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "✗ ERROR: No se pudieron obtener credenciales de IAM después de $MAX_ATTEMPTS intentos"
+                exit 1
+            fi
 
             # Descargar código desde S3
             S3_BUCKET="${S3BucketName}"

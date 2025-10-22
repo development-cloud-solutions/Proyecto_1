@@ -363,6 +363,7 @@ if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" &> /dev/null;
                 ParameterKey=DBPassword,ParameterValue="${DB_PASSWORD}" \
                 ParameterKey=JWTSecret,ParameterValue="${JWT_SECRET}" \
                 ParameterKey=TemplateS3BucketName,ParameterValue="${TEMPLATES_BUCKET}" \
+                ParameterKey=VideoStorageBucketName,ParameterValue="${VIDEOS_BUCKET}" \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
         log_info "Esperando a que el stack se actualice..."
@@ -382,6 +383,7 @@ else
             ParameterKey=DBPassword,ParameterValue="${DB_PASSWORD}" \
             ParameterKey=JWTSecret,ParameterValue="${JWT_SECRET}" \
             ParameterKey=TemplateS3BucketName,ParameterValue="${TEMPLATES_BUCKET}" \
+            ParameterKey=VideoStorageBucketName,ParameterValue="${VIDEOS_BUCKET}" \
         --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
         --on-failure DELETE
 

@@ -12,7 +12,11 @@ Parameters:
     Type: String
 
   PrivateSubnetIds:
-    Description: Comma-separated list of private subnet IDs
+    Description: Comma-separated list of private subnet IDs (NOT USED - Redis will use PublicSubnetIds)
+    Type: CommaDelimitedList
+
+  PublicSubnetIds:
+    Description: Comma-separated list of public subnet IDs for Redis
     Type: CommaDelimitedList
 
   InstanceSecurityGroup:
@@ -66,7 +70,8 @@ Resources:
       SecurityGroupIds:
         - !Ref RedisSecurityGroup
         - !Ref InstanceSecurityGroup
-      SubnetId: !Select [0, !Ref PrivateSubnetIds]
+      # CAMBIO: Usar subnet pública para Redis para permitir conectividad con workers
+      SubnetId: !Select [0, !Ref PublicSubnetIds]
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
