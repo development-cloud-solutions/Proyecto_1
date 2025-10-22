@@ -1,0 +1,7 @@
+CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O         PIDS
+2688eae6f838   anb_nginx      0.00%     3.031MiB / 256MiB     1.18%     58.1MB / 77.1MB   45.1kB / 12.3kB   2
+0bc4c5a0654c   anb_api        0.00%     18.45MiB / 1.5GiB     1.20%     116MB / 392kB     0B / 115MB        5
+2e3194466e7d   anb_frontend   0.00%     5.223MiB / 512MiB     1.02%     1.74kB / 126B     676kB / 8.19kB    5
+e4773f99eaba   anb_redis      0.97%     3.82MiB / 384MiB      0.99%     966kB / 225kB     0B / 16.4kB       6
+7479384e17c8   anb_worker     0.21%     20.98MiB / 1.562GiB   1.31%     348kB / 1.4MB     233kB / 127MB     9
+0d399512a793   anb_postgres   0.03%     52.86MiB / 7.712GiB   0.67%     285kB / 441kB     246kB / 57.7MB    13

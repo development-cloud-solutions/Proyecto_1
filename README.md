@@ -12,9 +12,24 @@ Diego Alberto Rodríguez Cruz  | da.rodriguezc123@uniandes.edu.co |
 ```
 Proyecto_1/
 ├── .gitignore
+├── aws-deployment/
+│   ├── .gitignore
+│   ├── 00-master-stack.yaml
+│   ├── 01-vpc-networking.yaml
+│   ├── 02-s3-iam.yaml
+│   ├── 03-elasticache.yaml
+│   ├── 03-elasticache.yaml.backup
+│   ├── 04-rds-database.yaml
+│   ├── 05-alb-autoscaling.yaml
+│   ├── 06-workers.yaml
+│   ├── anb-keypair.pem
+│   ├── cleanup.sh
+│   ├── deploy copy.sh
+│   ├── deploy.sh
+│   ├── parameters.example.json
+│   ├── README.md
 ├── back/
 │   ├── .dockerignore
-│   ├── .env
 │   ├── .env.example
 │   ├── artillery-config-simple.yml
 │   ├── artillery-config-video.yml
@@ -53,8 +68,10 @@ Proyecto_1/
 │   │   │   ├── auth_service.go
 │   │   │   ├── ranking_service.go
 │   │   │   ├── storage/
+│   │   │   │   ├── factory.go
 │   │   │   │   ├── interface.go
 │   │   │   │   ├── local_storage.go
+│   │   │   │   ├── s3_storage.go
 │   │   │   ├── video_service.go
 │   │   ├── utils/
 │   │   │   ├── jwt.go
@@ -67,14 +84,6 @@ Proyecto_1/
 │   ├── nginx/
 │   │   ├── nginx.conf
 │   ├── README.md
-│   ├── scripts/
-│   │   ├── generate-report.js
-│   │   ├── load-test-data.csv
-│   │   ├── load-test.sh
-│   │   ├── newman-tests.sh
-│   │   ├── processor.js
-│   │   ├── README.md
-│   │   ├── view-results.sh
 ├── capacity-planning/
 │   ├── Apache_Bench/
 │   │   ├── ab_tests.sh
@@ -94,9 +103,7 @@ Proyecto_1/
 │   │   │   ├── User_Registration_results.txt
 │   ├── jmeter/
 │   │   ├── anb_rising_stars_test.jmx
-│   ├── plan_de_pruebas.md
 │   ├── README.md
-├── CLAUDE.md
 ├── collections/
 │   ├── anb.json
 │   ├── postman_environment.json
@@ -115,9 +122,8 @@ Proyecto_1/
 │   ├── 006_create_views.up.sql
 │   ├── 007_create_triggers.down.sql
 │   ├── 007_create_triggers.up.sql
-│   ├── 008_grant_permissions.sql
-├── docker-cloud/
 ├── docker-compose.api.yml
+├── docker-compose.bd.yml
 ├── docker-compose.worker.yml
 ├── docker-compose.yml
 ├── docs/
@@ -128,20 +134,17 @@ Proyecto_1/
 │   │   ├── 001_Proyecto-Entrega_2.pdf
 │   │   ├── 002_Análisis_Capacidad.pdf
 │   │   ├── ISIS4426_Entrega_2_Req.pdf
+│   ├── Entrega_3/
+│   │   ├── 001_ISIS4426_Entrega_3_Req.pdf
+│   │   ├── 002_Proyecto_Entrega_3.pdf
+│   │   ├── README.md
 │   ├── Video/
 │   │   ├── README.md
 │   │   ├── Test_Video.mp4
 ├── front/
 │   ├── .dockerignore
-│   ├── .env
 │   ├── .env.example
 │   ├── .gitignore
-│   ├── dist/
-│   │   ├── assets/
-│   │   │   ├── index-7KedNVM0.css
-│   │   │   ├── index-DrXsQoys.js
-│   │   ├── index.html
-│   │   ├── vite.svg
 │   ├── Dockerfile
 │   ├── eslint.config.js
 │   ├── index.html
@@ -161,16 +164,17 @@ Proyecto_1/
 │   ├── tailwind.config.js
 │   ├── vite.config.js
 ├── load-test-reports/
-│   ├── load-test-results-20250929-213632.json
-│   ├── load-test-results-20250929-224856.json
-├── Makefile
-├── package-lock.json
-├── package.json
+│   ├── docker-stats-end-20251009-013832.txt
+│   ├── docker-stats-start-20251009-013832.txt
+│   ├── load-test-summary-20251009-013832.md
+│   ├── simple-test-20251009-013832.log
 ├── README.md
 ├── sustentacion/
 │   ├── Entrega_1/
 │   │   ├── README.md
 │   ├── Entrega_2/
+│   │   ├── README.md
+│   ├── Entrega_3/
 │   │   ├── README.md
 ```
 
@@ -179,14 +183,17 @@ Proyecto_1/
 - La carpeta `db` contiene el código SQL para la creación de objetos en la base de datos
 - La carpeta `docs/Entrega_1` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
 - La carpeta `docs/Entrega_2` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+- La carpeta `docs/Entrega_3` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
   - `docs\Entrega_2\001_Proyecto-Entrega_2.pdf` contiene la información del despliegue del proyecto en AWS
   - `docs\Entrega_2\002_Análisis_Capacidad.pdf` contiene la información correspondiente a las pruebas de carga realizadas.
   - `docs\Entrega_2\ISIS4426_Entrega_2_Req.pdf` documento de requerimientos para la entrega 2.
+  - `docs\Entrega_2\ISIS4426_Entrega_3_Req.pdf` documento de requerimientos para la entrega 3.
 - La carpeta `docs/Video` contiene un vídeo para pruebas tanto de carga como de uso en la API.
 - La carpeta `front` contiene el código correspondiente a la interfaz gráfica desarrollada en React, con su respectivo `README.md`
 - La carpeta `sustentacion` contiene el respectivo `README.md` en cada carpeta de entrega con el respectivo enlace del video de demostración.
   - `sustentacion\Entrega_1\README.md` contiene el link de sustenación al video de la entrega 1.
   - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 2.
+  - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 3.
 
 ## Ejecución del proyecto
 
