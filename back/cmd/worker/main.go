@@ -15,9 +15,8 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
+	// Intentar cargar .env si existe
+	_ = godotenv.Load()
 
 	cfg := config.Load()
 
@@ -27,7 +26,12 @@ func main() {
 	}
 	defer db.Close()
 
-	fileStorage := storage.NewLocalStorage(cfg.UploadPath)
+	// Inicializar storage según configuración (local o S3)
+	fileStorage, err := storage.NewStorage(cfg)
+	if err != nil {
+		log.Fatal("Failed to initialize storage:", err)
+	}
+
 	videoService := services.NewVideoService(db, cfg, fileStorage)
 	taskQueue := workers.NewTaskQueue(cfg)
 

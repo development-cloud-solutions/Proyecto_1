@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ANB Rising Stars - RDS PostgreSQL Database'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name prefix (must match VPC stack)
+    Type: String
+    Default: anb-production
+
+  DBInstanceClass:
+    Description: Database instance class
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t4g.micro
+      - db.t4g.small
+    ConstraintDescription: Must be a valid RDS instance type
+
+  DBName:
+    Description: PostgreSQL database name
+    Type: String
+    Default: proyecto_1
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+
+  DBUsername:
+    Description: Database admin username
+    Type: String
+    Default: postgres
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+
+  DBPassword:
+    Description: Database admin password
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: '^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|]*$'
+    ConstraintDescription: Must be between 8 and 41 characters
+
+  AllocatedStorage:
+    Description: Allocated storage in GB
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+    ConstraintDescription: Must be between 20 and 100 GB
+
+  BackupRetentionPeriod:
+    Description: Number of days to retain automated backups
+    Type: Number
+    Default: 7
+    MinValue: 0
+    MaxValue: 35
+
+  MultiAZ:
+    Description: Enable Multi-AZ deployment
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Resources:
+  # DB Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub '${EnvironmentName}-db-subnet-group'
+      DBSubnetGroupDescription: Subnet group for RDS PostgreSQL
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PrivateSubnet1'
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PrivateSubnet2'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-db-subnet-group'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # DB Parameter Group - Simplificado para AWS Academy
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: PostgreSQL 15 parameter group for ANB
+      Family: postgres15
+      Parameters:
+        max_connections: '100'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-db-params'
+
+  # RDS Instance - Configuración simplificada para AWS Academy
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub '${EnvironmentName}-postgres'
+      DBName: !Ref DBName
+      Engine: postgres
+      EngineVersion: '15'
+      DBInstanceClass: !Ref DBInstanceClass
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: !Ref AllocatedStorage
+      StorageType: gp2
+      StorageEncrypted: false
+      MultiAZ: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - Fn::ImportValue: !Sub '${EnvironmentName}-RDSSecurityGroup'
+      DBParameterGroupName: !Ref DBParameterGroup
+      BackupRetentionPeriod: 0
+      AutoMinorVersionUpgrade: false
+      PubliclyAccessible: false
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-postgres'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # CloudWatch Alarms
+  HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-rds-high-cpu'
+      AlarmDescription: Alert when RDS CPU exceeds 80%
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+  LowStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-rds-low-storage'
+      AlarmDescription: Alert when RDS free storage falls below 2GB
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 2000000000  # 2GB in bytes
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+  HighConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-rds-high-connections'
+      AlarmDescription: Alert when database connections exceed 80
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+Outputs:
+  DBInstanceEndpoint:
+    Description: RDS instance endpoint address
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${EnvironmentName}-DBEndpoint'
+
+  DBInstancePort:
+    Description: RDS instance port
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub '${EnvironmentName}-DBPort'
+
+  DBName:
+    Description: Database name
+    Value: !Ref DBName
+    Export:
+      Name: !Sub '${EnvironmentName}-DBName'
+
+  DBUsername:
+    Description: Database username
+    Value: !Ref DBUsername
+    Export:
+      Name: !Sub '${EnvironmentName}-DBUsername'
+
+  DBInstanceIdentifier:
+    Description: RDS instance identifier
+    Value: !Ref DBInstance
+    Export:
+      Name: !Sub '${EnvironmentName}-DBInstanceId'
+
+  DBConnectionString:
+    Description: PostgreSQL connection string (without password)
+    Value: !Sub 'postgresql://${DBUsername}@${DBInstance.Endpoint.Address}:${DBInstance.Endpoint.Port}/${DBName}'
+    Export:
+      Name: !Sub '${EnvironmentName}-DBConnectionString'

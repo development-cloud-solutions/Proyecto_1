@@ -1,0 +1,439 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ANB Rising Stars - Master Stack for Complete Infrastructure Deployment'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Environment Configuration
+        Parameters:
+          - EnvironmentName
+          - KeyPairName
+      - Label:
+          default: Database Configuration
+        Parameters:
+          - DBInstanceClass
+          - DBName
+          - DBUsername
+          - DBPassword
+          - AllocatedStorage
+      - Label:
+          default: Application Configuration
+        Parameters:
+          - JWTSecret
+          - DeploymentPackageS3Key
+      - Label:
+          default: Auto Scaling Configuration
+        Parameters:
+          - APIInstanceType
+          - MinSize
+          - MaxSize
+          - DesiredCapacity
+          - CPUTargetValue
+      - Label:
+          default: Worker Configuration
+        Parameters:
+          - WorkerInstanceType
+          - NumberOfWorkers
+          - WorkerConcurrency
+      - Label:
+          default: ElastiCache Configuration
+        Parameters:
+          - RedisCacheNodeType
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VpcCIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+
+Parameters:
+  # Environment
+  EnvironmentName:
+    Description: Environment name prefix for all resources
+    Type: String
+    Default: anb-production
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+
+  KeyPairName:
+    Description: EC2 Key Pair for SSH access (must exist in your account)
+    Type: AWS::EC2::KeyPair::KeyName
+
+  # Database
+  DBInstanceClass:
+    Description: Database instance class
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t4g.micro
+
+  DBName:
+    Description: PostgreSQL database name
+    Type: String
+    Default: proyecto_1
+
+  DBUsername:
+    Description: Database admin username
+    Type: String
+    Default: postgres
+
+  DBPassword:
+    Description: Database admin password (min 8 characters)
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  AllocatedStorage:
+    Description: Database storage in GB
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+
+  # Application
+  JWTSecret:
+    Description: JWT secret for authentication (min 32 characters)
+    Type: String
+    NoEcho: true
+    MinLength: 32
+
+  DeploymentPackageS3Key:
+    Description: S3 key path for deployment package (will be uploaded to created bucket)
+    Type: String
+    Default: deployments/latest/app.tar.gz
+
+  # Auto Scaling
+  APIInstanceType:
+    Description: EC2 instance type for API servers
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+
+  MinSize:
+    Description: Minimum instances in Auto Scaling Group
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  MaxSize:
+    Description: Maximum instances in Auto Scaling Group
+    Type: Number
+    Default: 3
+    MinValue: 1
+
+  DesiredCapacity:
+    Description: Desired instances in Auto Scaling Group
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  CPUTargetValue:
+    Description: Target CPU utilization for auto scaling (%)
+    Type: Number
+    Default: 70
+    MinValue: 40
+    MaxValue: 90
+
+  # Workers
+  WorkerInstanceType:
+    Description: EC2 instance type for Worker servers
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+
+  NumberOfWorkers:
+    Description: Number of worker instances
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 3
+
+  WorkerConcurrency:
+    Description: Concurrent video tasks per worker
+    Type: Number
+    Default: 4
+    MinValue: 1
+    MaxValue: 12
+
+  # Network
+  VpcCIDR:
+    Description: CIDR block for VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: CIDR for Public Subnet 1
+    Type: String
+    Default: 10.0.1.0/24
+
+  PublicSubnet2CIDR:
+    Description: CIDR for Public Subnet 2
+    Type: String
+    Default: 10.0.2.0/24
+
+  # S3 Template Location
+  TemplateS3BucketName:
+    Description: S3 bucket containing nested CloudFormation templates (leave empty to use local paths)
+    Type: String
+    Default: ''
+
+  # S3 Video Storage
+  VideoStorageBucketName:
+    Description: S3 bucket name for video storage (created by deploy.sh)
+    Type: String
+    Default: ''
+
+Conditions:
+  UseS3Templates: !Not [!Equals [!Ref TemplateS3BucketName, '']]
+
+Resources:
+  # 1. VPC and Networking
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/01-vpc-networking.yaml'
+        - './01-vpc-networking.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcCIDR: !Ref VpcCIDR
+        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
+        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        PrivateSubnet1CIDR: 10.0.11.0/24
+        PrivateSubnet2CIDR: 10.0.12.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vpc-stack'
+
+  # 2. Security Group for EC2 Instances (needed by ElastiCache)
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPCStack
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-ec2-sg
+      GroupDescription: Security group for EC2 instances (API and Workers)
+      VpcId: !GetAtt VPCStack.Outputs.VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from anywhere (for ALB and direct access)
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+          Description: API port for ALB health checks
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from anywhere
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH from anywhere
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ec2-sg
+
+  # 3. S3 and IAM
+  S3IAMStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/02-s3-iam.yaml'
+        - './02-s3-iam.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        S3BucketName: !Ref VideoStorageBucketName
+        CreateBucket: 'false'  # El bucket ya existe (creado por deploy.sh)
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-s3-iam-stack'
+
+  # 4. ElastiCache Redis
+  ElastiCacheStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+      - EC2SecurityGroup
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/03-elasticache.yaml'
+        - './03-elasticache.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcId: !GetAtt VPCStack.Outputs.VPCId
+        PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnets
+        PublicSubnetIds: !GetAtt VPCStack.Outputs.PublicSubnets
+        InstanceSecurityGroup: !Ref EC2SecurityGroup
+        KeyPairName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-elasticache-stack'
+
+  # 5. RDS Database
+  RDSStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/04-rds-database.yaml'
+        - './04-rds-database.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        DBInstanceClass: !Ref DBInstanceClass
+        DBName: !Ref DBName
+        DBUsername: !Ref DBUsername
+        DBPassword: !Ref DBPassword
+        AllocatedStorage: !Ref AllocatedStorage
+        BackupRetentionPeriod: 7
+        MultiAZ: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-rds-stack'
+
+  # 6. ALB and Auto Scaling Group
+  ALBAutoScalingStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+      - S3IAMStack
+      - RDSStack
+      - ElastiCacheStack
+      - EC2SecurityGroup
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/05-alb-autoscaling.yaml'
+        - './05-alb-autoscaling.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        KeyPairName: !Ref KeyPairName
+        APIInstanceType: !Ref APIInstanceType
+        MinSize: !Ref MinSize
+        MaxSize: !Ref MaxSize
+        DesiredCapacity: !Ref DesiredCapacity
+        CPUTargetValue: !Ref CPUTargetValue
+        JWTSecret: !Ref JWTSecret
+        DBPassword: !Ref DBPassword
+        DBHost: !GetAtt RDSStack.Outputs.DBInstanceEndpoint
+        DBName: !Ref DBName
+        DBUsername: !Ref DBUsername
+        S3BucketName: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
+        DeploymentPackageS3Key: !Ref DeploymentPackageS3Key
+        RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+        InstanceSecurityGroup: !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-alb-asg-stack'
+
+  # 7. Worker Instances
+  WorkersStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+      - S3IAMStack
+      - RDSStack
+      - ElastiCacheStack
+      - ALBAutoScalingStack
+      - EC2SecurityGroup
+    Properties:
+      TemplateURL: !If
+        - UseS3Templates
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/06-workers.yaml'
+        - './06-workers.yaml'
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        KeyPairName: !Ref KeyPairName
+        WorkerInstanceType: !Ref WorkerInstanceType
+        NumberOfWorkers: !Ref NumberOfWorkers
+        WorkerConcurrency: !Ref WorkerConcurrency
+        DBPassword: !Ref DBPassword
+        DBHost: !GetAtt RDSStack.Outputs.DBInstanceEndpoint
+        DBName: !Ref DBName
+        DBUsername: !Ref DBUsername
+        S3BucketName: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
+        DeploymentPackageS3Key: !Ref DeploymentPackageS3Key
+        RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+        InstanceSecurityGroup: !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-workers-stack'
+
+Outputs:
+  # VPC Outputs
+  VPCId:
+    Description: VPC ID
+    Value: !GetAtt VPCStack.Outputs.VPCId
+
+  # S3 Outputs
+  S3BucketName:
+    Description: S3 bucket for video storage
+    Value: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
+
+  # Database Outputs
+  DBEndpoint:
+    Description: RDS PostgreSQL endpoint
+    Value: !GetAtt RDSStack.Outputs.DBInstanceEndpoint
+
+  DBConnectionString:
+    Description: Database connection string (without password)
+    Value: !GetAtt RDSStack.Outputs.DBConnectionString
+
+  # ElastiCache Outputs
+  RedisEndpoint:
+    Description: ElastiCache Redis endpoint
+    Value: !GetAtt ElastiCacheStack.Outputs.RedisEndpoint
+
+  RedisUrl:
+    Description: Complete Redis URL (host:port)
+    Value: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+
+  # Application Outputs
+  ApplicationURL:
+    Description: Application URL (Load Balancer)
+    Value: !GetAtt ALBAutoScalingStack.Outputs.LoadBalancerURL
+
+  LoadBalancerDNS:
+    Description: Load Balancer DNS name
+    Value: !GetAtt ALBAutoScalingStack.Outputs.LoadBalancerDNS
+
+  # Auto Scaling Outputs
+  AutoScalingGroupName:
+    Description: Auto Scaling Group name
+    Value: !GetAtt ALBAutoScalingStack.Outputs.AutoScalingGroupName
+
+  # Worker Outputs
+  Worker1InstanceId:
+    Description: Worker 1 instance ID
+    Value: !GetAtt WorkersStack.Outputs.Worker1InstanceId
+
+  Worker1PublicIP:
+    Description: Worker 1 public IP
+    Value: !GetAtt WorkersStack.Outputs.Worker1PublicIP
+
+  # Next Steps
+  NextSteps:
+    Description: Next steps after deployment
+    Value: !Sub |
+      1. Upload deployment package: aws s3 cp app.tar.gz s3://${S3IAMStack.Outputs.VideoStorageBucketName}/${DeploymentPackageS3Key}
+      2. Run database migrations: Connect to ${RDSStack.Outputs.DBInstanceEndpoint} and execute SQL files from db/ directory
+      3. Access application: http://${ALBAutoScalingStack.Outputs.LoadBalancerDNS}
+      4. Monitor Auto Scaling: Check CloudWatch dashboard and alarms
+      5. Test video upload: Use Postman collection or frontend at application URL

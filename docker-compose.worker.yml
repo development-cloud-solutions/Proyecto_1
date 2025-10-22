@@ -1,4 +1,25 @@
+# Docker Compose para Worker Layer en AWS
+# Este archivo está diseñado para ejecutarse en instancias EC2 dedicadas al procesamiento de videos
+#
+# Arquitectura:
+# - Instancias EC2 dedicadas solo a procesamiento de videos
+# - Consumen tareas de Redis (compartido con API layer)
+# - Acceden a RDS (PostgreSQL compartido)
+# - Leen/escriben videos en S3
+# - NO exponen API REST
+#
+# Variables de entorno requeridas:
+# - AWS_REGION: Región de AWS (us-east-1 o us-west-2)
+# - S3_BUCKET_NAME: Nombre del bucket S3 para videos
+# - DB_HOST: Endpoint de Amazon RDS
+# - DB_NAME: Nombre de la base de datos en RDS
+# - DB_USER: Usuario de RDS
+# - DB_PASSWORD: Contraseña de RDS
+# - REDIS_URL: Endpoint de Redis (ElastiCache o EC2 con Redis)
+# - WORKER_CONCURRENCY: Número de tareas simultáneas (default: 4)
+
 services:
+  # Worker - Procesamiento de videos
   worker:
     build:
       context: ./back
@@ -7,34 +28,75 @@ services:
     command: ./worker
     environment:
       - TZ=America/Bogota
-      # Database configuration (usar Amazon RDS)
+
+      # Database - Amazon RDS PostgreSQL
       - DB_DRIVER=postgres
-      - DB_HOST=192.168.135.135
+      - DB_HOST=${DB_HOST:-postgres}
       - DB_PORT=5432
-      - DB_NAME=proyecto_1
-      - DB_USER=usrpostgres
-      - DB_PASSWORD=password
-      - DB_SSL_MODE=disable
+      - DB_NAME=${DB_NAME:-proyecto_1}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
 
-      # Redis
-      - REDIS_URL=172.21.10.97:6379 # IP DE REDIRS EN AWS
+      # Redis - Compartido con API layer
+      - REDIS_URL=${REDIS_URL:-redis:6379}
 
-      # Worker config
-      - WORKER_MODE=true
-      - ENVIRONMENT=development
+      # Worker configuration
+      - WORKER_MODE=${WORKER_MODE:-true}
+      - ENVIRONMENT=production
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4}
+
+      # Storage - Amazon S3
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_UPLOAD_PREFIX=uploads
+      - S3_PROCESSED_PREFIX=processed
+
+      # Legacy paths (no se usan con S3)
       - UPLOAD_PATH=/app/uploads
       - PROCESSED_PATH=/app/processed
-      - WORKER_CONCURRENCY=3
+
+      # Limits
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}
+      
+      # Video processing settings
+      - MAX_VIDEO_DURATION=${MAX_VIDEO_DURATION:-104857600}
+      - OUTPUT_RESOLUTION=${OUTPUT_RESOLUTION:-1280x720}
+      - OUTPUT_ASPECT_RATIO=${OUTPUT_ASPECT_RATIO:-16:9}
+      
+    # volumes:
+    #       # Montaje del NFS compartido
+    #       - /mnt/nfs/uploads:/app/uploads
+    #       - /mnt/nfs/processed:/app/processed
+    
+    # Almacenamiento en local
     volumes:
-      # Montaje del NFS compartido
-      - /mnt/nfs/uploads:/app/uploads
-      - /mnt/nfs/processed:/app/processed
+      - video_uploads:/app/uploads
+      - video_processed:/app/processed
+    networks:
+      - anb_network
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: '1.8'     # 0.90 de CPU para worker principal
-          memory: 1600M   # 0.80 de RAM para worker principal (1.6GB)
+          cpus: '1.8'
+          memory: 1600M
         reservations:
-          cpus: '1.0'     # Garantizar 0.50 CPU mínimo
-          memory: 1024M   # Garantizar 1GB mínimo
+          cpus: '1.0'
+          memory: 1024M
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "worker"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Almacenamiento en local
+volumes:
+  video_uploads:
+  video_processed:
+
+networks:
+  anb_network:
+    external: true

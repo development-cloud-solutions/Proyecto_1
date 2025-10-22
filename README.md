@@ -12,9 +12,24 @@ Diego Alberto Rodríguez Cruz  | da.rodriguezc123@uniandes.edu.co |
 ```
 Proyecto_1/
 ├── .gitignore
+├── aws-deployment/
+│   ├── .gitignore
+│   ├── 00-master-stack.yaml
+│   ├── 01-vpc-networking.yaml
+│   ├── 02-s3-iam.yaml
+│   ├── 03-elasticache.yaml
+│   ├── 03-elasticache.yaml.backup
+│   ├── 04-rds-database.yaml
+│   ├── 05-alb-autoscaling.yaml
+│   ├── 06-workers.yaml
+│   ├── anb-keypair.pem
+│   ├── cleanup.sh
+│   ├── deploy copy.sh
+│   ├── deploy.sh
+│   ├── parameters.example.json
+│   ├── README.md
 ├── back/
 │   ├── .dockerignore
-│   ├── .env
 │   ├── .env.example
 │   ├── artillery-config-simple.yml
 │   ├── artillery-config-video.yml
@@ -53,8 +68,10 @@ Proyecto_1/
 │   │   │   ├── auth_service.go
 │   │   │   ├── ranking_service.go
 │   │   │   ├── storage/
+│   │   │   │   ├── factory.go
 │   │   │   │   ├── interface.go
 │   │   │   │   ├── local_storage.go
+│   │   │   │   ├── s3_storage.go
 │   │   │   ├── video_service.go
 │   │   ├── utils/
 │   │   │   ├── jwt.go
@@ -67,14 +84,6 @@ Proyecto_1/
 │   ├── nginx/
 │   │   ├── nginx.conf
 │   ├── README.md
-│   ├── scripts/
-│   │   ├── generate-report.js
-│   │   ├── load-test-data.csv
-│   │   ├── load-test.sh
-│   │   ├── newman-tests.sh
-│   │   ├── processor.js
-│   │   ├── README.md
-│   │   ├── view-results.sh
 ├── capacity-planning/
 │   ├── Apache_Bench/
 │   │   ├── ab_tests.sh
@@ -94,9 +103,7 @@ Proyecto_1/
 │   │   │   ├── User_Registration_results.txt
 │   ├── jmeter/
 │   │   ├── anb_rising_stars_test.jmx
-│   ├── plan_de_pruebas.md
 │   ├── README.md
-├── CLAUDE.md
 ├── collections/
 │   ├── anb.json
 │   ├── postman_environment.json
@@ -115,9 +122,8 @@ Proyecto_1/
 │   ├── 006_create_views.up.sql
 │   ├── 007_create_triggers.down.sql
 │   ├── 007_create_triggers.up.sql
-│   ├── 008_grant_permissions.sql
-├── docker-cloud/
 ├── docker-compose.api.yml
+├── docker-compose.bd.yml
 ├── docker-compose.worker.yml
 ├── docker-compose.yml
 ├── docs/
@@ -128,20 +134,17 @@ Proyecto_1/
 │   │   ├── 001_Proyecto-Entrega_2.pdf
 │   │   ├── 002_Análisis_Capacidad.pdf
 │   │   ├── ISIS4426_Entrega_2_Req.pdf
+│   ├── Entrega_3/
+│   │   ├── 001_ISIS4426_Entrega_3_Req.pdf
+│   │   ├── 002_Proyecto_Entrega_3.pdf
+│   │   ├── README.md
 │   ├── Video/
 │   │   ├── README.md
 │   │   ├── Test_Video.mp4
 ├── front/
 │   ├── .dockerignore
-│   ├── .env
 │   ├── .env.example
 │   ├── .gitignore
-│   ├── dist/
-│   │   ├── assets/
-│   │   │   ├── index-7KedNVM0.css
-│   │   │   ├── index-DrXsQoys.js
-│   │   ├── index.html
-│   │   ├── vite.svg
 │   ├── Dockerfile
 │   ├── eslint.config.js
 │   ├── index.html
@@ -161,16 +164,17 @@ Proyecto_1/
 │   ├── tailwind.config.js
 │   ├── vite.config.js
 ├── load-test-reports/
-│   ├── load-test-results-20250929-213632.json
-│   ├── load-test-results-20250929-224856.json
-├── Makefile
-├── package-lock.json
-├── package.json
+│   ├── docker-stats-end-20251009-013832.txt
+│   ├── docker-stats-start-20251009-013832.txt
+│   ├── load-test-summary-20251009-013832.md
+│   ├── simple-test-20251009-013832.log
 ├── README.md
 ├── sustentacion/
 │   ├── Entrega_1/
 │   │   ├── README.md
 │   ├── Entrega_2/
+│   │   ├── README.md
+│   ├── Entrega_3/
 │   │   ├── README.md
 ```
 
@@ -179,14 +183,17 @@ Proyecto_1/
 - La carpeta `db` contiene el código SQL para la creación de objetos en la base de datos
 - La carpeta `docs/Entrega_1` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
 - La carpeta `docs/Entrega_2` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+- La carpeta `docs/Entrega_3` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
   - `docs\Entrega_2\001_Proyecto-Entrega_2.pdf` contiene la información del despliegue del proyecto en AWS
   - `docs\Entrega_2\002_Análisis_Capacidad.pdf` contiene la información correspondiente a las pruebas de carga realizadas.
   - `docs\Entrega_2\ISIS4426_Entrega_2_Req.pdf` documento de requerimientos para la entrega 2.
+  - `docs\Entrega_2\ISIS4426_Entrega_3_Req.pdf` documento de requerimientos para la entrega 3.
 - La carpeta `docs/Video` contiene un vídeo para pruebas tanto de carga como de uso en la API.
 - La carpeta `front` contiene el código correspondiente a la interfaz gráfica desarrollada en React, con su respectivo `README.md`
 - La carpeta `sustentacion` contiene el respectivo `README.md` en cada carpeta de entrega con el respectivo enlace del video de demostración.
   - `sustentacion\Entrega_1\README.md` contiene el link de sustenación al video de la entrega 1.
   - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 2.
+  - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 3.
 
 ## Ejecución del proyecto
 
@@ -241,10 +248,121 @@ docker compose -f docker-compose.local.yml up -d
   - Archivo JSON de pruebas en postman `anb.json`
 
 
-# Despliegue en AWS
+# Entrega 2 :: Despliegue en AWS
 
 > Para la Entrega 2, se realizo el uso de AWS mediante servicios de EC2, en los cuales se desplegaron los servicios de la aplicación.
 
 Con el fin de crear los objetos necesarios en EC2, se segmento el docker compose en archivos separados:
+- Para la base de datos, se creo el archivo `docker-compose.bd.yml` con la creación de objetos para el funcionamiento de la aplicación.
+```
+docker compose -f docker-compose.bd.yml --env-file back/.env up -d
+```
+
 - Para el despliegue del backend, se creo el archivo `docker-compose.api.yml` con la información y objetos necesarios para la misma.
+```
+docker compose -f docker-compose.api.yml --env-file back/.env up -d
+```
+
 - Para el despligue del worker, se creo el archivo `docker-compose.worker.yml` con los recursos respectivos para la ejecución de este.
+```
+docker compose -f docker-compose.worker.yml --env-file back/.env up -d
+```
+
+# Entrega 3 :: Despliegue en AWS
+
+> Para la entrega 3, se realizo el uso de servicios de AWS como EC2, ALB, RDS, S3.
+
+Con el fin de facilitar el despliegue se creo un script automatizado en `CloudFormation`, con el cual se crean los servicios necesarios para el despliegue.
+
+**NOTA** Se debe tener instalado AWS CLI en la máquina de despliegue
+
+- Generar la llave para conexión
+```bash
+# Crear un nuevo Key Pair
+aws ec2 create-key-pair \
+  --key-name anb-keypair \
+  --query 'KeyMaterial' \
+  --output text > anb-keypair.pem
+
+# Proteger el archivo
+chmod 400 anb-keypair.pem
+```
+
+- Generar password
+```bash
+# Generar JWT secret
+JWT_SECRET=$(openssl rand -hex 32)
+
+# Generar DB password (Modificar para producción)
+DB_PASSWORD="MySecurePassword123!"
+```
+
+- Ejecutar desde la raíz del proyecto `Proyecto_1`:
+```bash
+./aws-deployment/deploy.sh anb-production anb-keypair "$DB_PASSWORD" "$JWT_SECRET"
+```
+
+Al finalizar el despligue se debe presentar un mensaje similar al siguiente:
+```bash
+[INFO] Desplegando CloudFormation stack: anb-production-master
+[INFO] Stack Name: anb-production-master
+[INFO] Templates Bucket: anb-cf-templates-xxxxx-us-east-1
+[INFO] Region: us-east-1
+[INFO] Creando nuevo stack...
+{
+    "StackId": "arn:aws:cloudformation:us-east-1:xxxxx:stack/anb-production-master/xxxxx-af18-11f0-b155-xxxxx"
+}
+[INFO] Esperando a que el stack se cree (esto puede tomar 10-15 minutos)...
+[SUCCESS] Stack desplegado exitosamente!
+
+[INFO] Obteniendo información del stack...
+[INFO] Verificando estado del Auto Scaling Group...
+[INFO] Instancias en ASG: 1/1 healthy
+[SUCCESS] ✓ Instancias healthy: 1/1
+[INFO] Para ejecutar las migraciones de base de datos, conéctate a RDS y ejecuta:
+[INFO] Endpoint: anb-production-postgres.xxxxx.us-east-1.rds.amazonaws.com
+[INFO] Database: proyecto_1
+[INFO] User: postgres
+[INFO]
+[INFO] Comando:
+[INFO]   for file in db/*.up.sql; do
+[INFO]     psql -h anb-production-postgres.xxxxx.us-east-1.rds.amazonaws.com -U postgres -d proyecto_1 -f "$file"
+[INFO]   done
+
+
+==========================================
+[SUCCESS] DESPLIEGUE COMPLETADO
+==========================================
+
+[INFO] Stack Name: anb-production-master
+[INFO] S3 Bucket: anb-videos-xxxxx-us-east-1
+[INFO] Application URL: http://anb-production-alb-xxxxx.us-east-1.elb.amazonaws.com
+[INFO] Database Endpoint: anb-production-postgres.xxxxx.us-east-1.rds.amazonaws.com
+
+```
+
+Una vez la infraestructura se ha desplegado correctamente se evidencia en el log, el acceso a las diferentes URL. Ingresar a la máquina EC2 del API y ejecutar (cuando se solicite el password de la base de datos es la configurada en el paso anterior en la variable `DB_PASSWORD`)
+```bash
+# EC2 - Ingresar a la carpeta de la aplicacíón
+cd /opt/anb-app/
+
+# Ejecutar la instalación de scripts en RDS, reemplazar URL_RDS por la conexión a BD
+for file in db/*.up.sql; do
+  psql -h anb-production-postgres.xxxx.us-east-1.rds.amazonaws.com -U postgres -d proyecto_1 -f "$file"
+done
+```
+
+- Para la eliminación de la infraestructura creada ejecutar, desde la raíz del proyecto `Proyecto_1` 
+```bash
+./aws-deployment/cleanup.sh anb-production
+```
+
+> Para más información sobre el despliegue automatica remitirse al `README.md` de la carpeta `aws-deployment`
+
+
+# Sustentación
+
+Vídeos de sustentación
+- Entrega 1 => `sustentacion\Entrega_1\README.md`
+- Entrega 2 => `sustentacion\Entrega_2\README.md`
+- Entrega 3 => `sustentacion\Entrega_3\README.md`

@@ -28,10 +28,10 @@ WORKDIR /app
 COPY --from=builder /app/worker .
 
 # Copiar archivo .env
-COPY --from=builder /app/.env ./
+#COPY --from=builder /app/.env ./
 
 # Copiar assets (marca de agua)
-COPY assets/ /app/assets/
+COPY --from=builder /app/assets/ /app/assets/
 
 # Crear directorios
 RUN mkdir -p uploads processed

@@ -1,0 +1,43 @@
+#version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: anb_postgres
+    environment:
+      - POSTGRES_DB=proyecto_1
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+      - TZ=America/Bogota
+    volumes:
+      - ./db/001_create_users.down.sql:/docker-entrypoint-initdb.d/001_create_users.down.sql
+      - ./db/001_create_users.up.sql:/docker-entrypoint-initdb.d/001_create_users.up.sql
+      - ./db/002_create_videos.down.sql:/docker-entrypoint-initdb.d/002_create_videos.down.sql
+      - ./db/002_create_videos.up.sql:/docker-entrypoint-initdb.d/002_create_videos.up.sql
+      - ./db/003_create_votes.down.sql:/docker-entrypoint-initdb.d/003_create_votes.down.sql
+      - ./db/003_create_votes.up.sql:/docker-entrypoint-initdb.d/003_create_votes.up.sql
+      - ./db/004_create_task_results.down.sql:/docker-entrypoint-initdb.d/004_create_task_results.down.sql
+      - ./db/004_create_task_results.up.sql:/docker-entrypoint-initdb.d/004_create_task_results.up.sql
+      - ./db/005_create_user_sessions.down.sql:/docker-entrypoint-initdb.d/005_create_user_sessions.down.sql
+      - ./db/005_create_user_sessions.up.sql:/docker-entrypoint-initdb.d/005_create_user_sessions.up.sql
+      - ./db/006_create_views.down.sql:/docker-entrypoint-initdb.d/006_create_views.down.sql
+      - ./db/006_create_views.up.sql:/docker-entrypoint-initdb.d/006_create_views.up.sql
+      - ./db/007_create_triggers.down.sql:/docker-entrypoint-initdb.d/007_create_triggers.down.sql
+      - ./db/007_create_triggers.up.sql:/docker-entrypoint-initdb.d/007_create_triggers.up.sql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d proyecto_1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: anb_network
+    driver: bridge

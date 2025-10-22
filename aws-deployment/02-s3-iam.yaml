@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ANB Rising Stars - S3 Storage and IAM Roles'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name prefix
+    Type: String
+    Default: anb-production
+
+  S3BucketName:
+    Description: S3 bucket name for video storage (leave empty for auto-generated)
+    Type: String
+    Default: ''
+
+  CreateBucket:
+    Description: Whether to create the S3 bucket (false if bucket already exists)
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Conditions:
+  AutoGenerateBucketName: !Equals [!Ref S3BucketName, '']
+  ShouldCreateBucket: !Equals [!Ref CreateBucket, 'true']
+
+Resources:
+  # S3 Bucket for Video Storage (solo se crea si CreateBucket=true)
+  VideoStorageBucket:
+    Type: AWS::S3::Bucket
+    Condition: ShouldCreateBucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !If
+        - AutoGenerateBucketName
+        - !Sub 'anb-videos-${AWS::AccountId}-${AWS::Region}'
+        - !Ref S3BucketName
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          # Move processed videos to Glacier after 90 days
+          - Id: MoveProcessedVideosToGlacier
+            Status: Enabled
+            Prefix: processed/
+            Transitions:
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+          # Delete old uploads after 30 days
+          - Id: DeleteOldUploads
+            Status: Enabled
+            Prefix: uploads/
+            ExpirationInDays: 30
+          # Delete incomplete multipart uploads after 7 days
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedHeaders:
+              - '*'
+            ExposedHeaders:
+              - ETag
+              - x-amz-request-id
+            MaxAge: 3000
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-video-storage'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Application
+          Value: ANB-Rising-Stars
+
+  # S3 Bucket Policy (solo se crea si el bucket se crea)
+  VideoStorageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: ShouldCreateBucket
+    Properties:
+      Bucket: !Ref VideoStorageBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt VideoStorageBucket.Arn
+              - !Sub '${VideoStorageBucket.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  # NOTA: AWS Academy no permite crear roles IAM
+  # Usamos el LabInstanceProfile que ya existe en AWS Academy
+  # Este perfil tiene permisos para EC2, S3, CloudWatch, etc.
+
+  # CloudWatch Log Groups
+  APILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/ec2/anb-api'
+      RetentionInDays: 7
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/ec2/anb-worker'
+      RetentionInDays: 7
+
+  UserDataLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/ec2/anb-user-data'
+      RetentionInDays: 3
+
+Outputs:
+  VideoStorageBucketName:
+    Description: S3 bucket name for video storage
+    Value: !If
+      - ShouldCreateBucket
+      - !Ref VideoStorageBucket
+      - !If
+        - AutoGenerateBucketName
+        - !Sub 'anb-videos-${AWS::AccountId}-${AWS::Region}'
+        - !Ref S3BucketName
+    Export:
+      Name: !Sub '${EnvironmentName}-S3BucketName'
+
+  VideoStorageBucketArn:
+    Description: S3 bucket ARN
+    Value: !If
+      - ShouldCreateBucket
+      - !GetAtt VideoStorageBucket.Arn
+      - !Sub
+        - 'arn:aws:s3:::${BucketName}'
+        - BucketName: !If
+          - AutoGenerateBucketName
+          - !Sub 'anb-videos-${AWS::AccountId}-${AWS::Region}'
+          - !Ref S3BucketName
+    Export:
+      Name: !Sub '${EnvironmentName}-S3BucketArn'
+
+  VideoStorageBucketDomainName:
+    Description: S3 bucket domain name
+    Value: !If
+      - ShouldCreateBucket
+      - !GetAtt VideoStorageBucket.DomainName
+      - !Sub
+        - '${BucketName}.s3.amazonaws.com'
+        - BucketName: !If
+          - AutoGenerateBucketName
+          - !Sub 'anb-videos-${AWS::AccountId}-${AWS::Region}'
+          - !Ref S3BucketName
+    Export:
+      Name: !Sub '${EnvironmentName}-S3BucketDomain'
+
+  EC2InstanceProfileName:
+    Description: Instance profile name for EC2 (AWS Academy LabInstanceProfile)
+    Value: LabInstanceProfile
+    Export:
+      Name: !Sub '${EnvironmentName}-EC2InstanceProfileName'

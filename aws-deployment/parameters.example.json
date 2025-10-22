@@ -1,0 +1,82 @@
+[
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "anb-production"
+  },
+  {
+    "ParameterKey": "KeyPairName",
+    "ParameterValue": "anb-keypair"
+  },
+  {
+    "ParameterKey": "DBInstanceClass",
+    "ParameterValue": "db.t3.micro"
+  },
+  {
+    "ParameterKey": "DBName",
+    "ParameterValue": "proyecto_1"
+  },
+  {
+    "ParameterKey": "DBUsername",
+    "ParameterValue": "postgres"
+  },
+  {
+    "ParameterKey": "DBPassword",
+    "ParameterValue": "CHANGE_ME_MySecurePassword123!"
+  },
+  {
+    "ParameterKey": "AllocatedStorage",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "JWTSecret",
+    "ParameterValue": "CHANGE_ME_run_openssl_rand_hex_32"
+  },
+  {
+    "ParameterKey": "DeploymentPackageS3Key",
+    "ParameterValue": "deployments/latest/app.tar.gz"
+  },
+  {
+    "ParameterKey": "APIInstanceType",
+    "ParameterValue": "t3.small"
+  },
+  {
+    "ParameterKey": "MinSize",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "MaxSize",
+    "ParameterValue": "3"
+  },
+  {
+    "ParameterKey": "DesiredCapacity",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "CPUTargetValue",
+    "ParameterValue": "70"
+  },
+  {
+    "ParameterKey": "WorkerInstanceType",
+    "ParameterValue": "t3.small"
+  },
+  {
+    "ParameterKey": "NumberOfWorkers",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "WorkerConcurrency",
+    "ParameterValue": "4"
+  },
+  {
+    "ParameterKey": "VpcCIDR",
+    "ParameterValue": "10.0.0.0/16"
+  },
+  {
+    "ParameterKey": "PublicSubnet1CIDR",
+    "ParameterValue": "10.0.1.0/24"
+  },
+  {
+    "ParameterKey": "PublicSubnet2CIDR",
+    "ParameterValue": "10.0.2.0/24"
+  }
+]

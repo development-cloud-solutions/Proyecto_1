@@ -1670,3 +1670,8 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,emacs,windows,linux,archlinuxpackages,python,pythonvanilla,circuitpython,git,gitbook,tortoisegit,react,reactnative,node,nodechakratimetraveldebug,go,godot,goland,goodsync,goland+all,goland+iml,django,java,intellij,intellij+all,intellij+iml,visualstudiocode,visualstudio
+
+# empaquetado para despliegue en AWS
+deployment-package/
+
+*.pem

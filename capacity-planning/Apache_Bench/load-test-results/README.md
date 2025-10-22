@@ -4,7 +4,7 @@
 ### Configuración
 - Total de requests por prueba: 1000
 - Usuarios concurrentes: 100
-- URL base: http://localhost:8080/api
+- URL base: http://localhost:80/api
 
 ### Resultados por Endpoint
 

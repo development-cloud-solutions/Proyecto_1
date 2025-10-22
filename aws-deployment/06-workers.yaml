@@ -1,0 +1,478 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ANB Rising Stars - Worker Instances for Video Processing'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name prefix (must match other stacks)
+    Type: String
+    Default: anb-production
+
+  KeyPairName:
+    Description: EC2 Key Pair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair
+
+  WorkerInstanceType:
+    Description: EC2 instance type for Worker servers
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t2.micro
+      - t2.small
+      - t2.medium
+
+  LatestAmiId:
+    Description: Latest Amazon Linux 2023 AMI ID
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+  NumberOfWorkers:
+    Description: Number of worker instances to launch
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 3
+
+  WorkerConcurrency:
+    Description: Number of concurrent video processing tasks per worker
+    Type: Number
+    Default: 4
+    MinValue: 1
+    MaxValue: 12
+
+  DBPassword:
+    Description: Database password
+    Type: String
+    NoEcho: true
+
+  DBHost:
+    Description: Database endpoint address
+    Type: String
+
+  DBName:
+    Description: Database name
+    Type: String
+    Default: proyecto_1
+
+  DBUsername:
+    Description: Database username
+    Type: String
+    Default: postgres
+
+  S3BucketName:
+    Description: S3 bucket name for video storage
+    Type: String
+
+  DeploymentPackageS3Key:
+    Description: S3 key for deployment package
+    Type: String
+    Default: deployments/latest/app.tar.gz
+
+  RedisUrl:
+    Description: ElastiCache Redis endpoint (host:port)
+    Type: String
+
+  InstanceSecurityGroup:
+    Description: Security Group ID for EC2 instances
+    Type: String
+
+Conditions:
+  CreateWorker2: !Or
+    - !Equals [!Ref NumberOfWorkers, 2]
+    - !Equals [!Ref NumberOfWorkers, 3]
+  CreateWorker3: !Equals [!Ref NumberOfWorkers, 3]
+
+Resources:
+  # Worker Instance 1
+  Worker1Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref WorkerInstanceType
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: LabInstanceProfile
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      SubnetId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet1'
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # IMPORTANTE: NO usar 'set -e' para permitir debugging
+          exec > >(tee /var/log/user-data.log)
+          exec 2>&1
+
+          echo "=========================================="
+          echo "Iniciando configuración de Worker 1"
+          echo "Hora: $(date)"
+          echo "=========================================="
+
+          # Actualizar sistema
+          yum update -y
+          yum install -y docker git wget telnet
+
+          # Instalar cliente de postgres
+          yum install -y postgresql15
+          
+          # Iniciar Docker
+          systemctl enable docker
+          systemctl start docker
+
+          # Agregar ec2-user al grupo docker para evitar 'permission denied'
+          usermod -aG docker ec2-user
+
+          # Instalar Docker Compose
+          curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
+          # Instalar AWS CLI v2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          rm -rf aws awscliv2.zip
+
+          # Crear directorio de aplicación
+          APP_DIR="/opt/anb-worker"
+          mkdir -p ${!APP_DIR}
+          cd ${!APP_DIR}
+
+          # Esperar a que IAM Instance Profile esté disponible
+          echo "Esperando a que las credenciales de IAM estén disponibles..."
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              if aws sts get-caller-identity --region ${AWS::Region} > /dev/null 2>&1; then
+                  echo "✓ Credenciales de IAM disponibles"
+                  break
+              fi
+              ATTEMPT=$((ATTEMPT + 1))
+              echo "Intento $ATTEMPT/$MAX_ATTEMPTS - Esperando credenciales..."
+              sleep 10
+          done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "✗ ERROR: No se pudieron obtener credenciales de IAM después de $MAX_ATTEMPTS intentos"
+              exit 1
+          fi
+
+          # Descargar código desde S3
+          S3_BUCKET="${S3BucketName}"
+          echo "Descargando app.tar.gz desde s3://${!S3_BUCKET}/${DeploymentPackageS3Key}"
+          aws s3 cp s3://${!S3_BUCKET}/${DeploymentPackageS3Key} app.tar.gz --region ${AWS::Region}
+
+          if [ ! -f app.tar.gz ]; then
+              echo "✗ ERROR: No se pudo descargar app.tar.gz"
+              exit 1
+          fi
+
+          tar -xzf app.tar.gz
+          rm app.tar.gz
+
+          # Crear red Docker
+          docker network create anb_network || true
+
+          # Configurar variables de entorno
+          cat > ${!APP_DIR}/.env << 'EOF'
+          # AWS Configuration
+          AWS_REGION=${AWS::Region}
+          S3_BUCKET_NAME=${S3BucketName}
+          S3_UPLOAD_PREFIX=uploads
+          S3_PROCESSED_PREFIX=processed
+
+          # Database Configuration
+          DB_HOST=${DBHost}
+          DB_PORT=5432
+          DB_NAME=${DBName}
+          DB_USER=${DBUsername}
+          DB_PASSWORD=${DBPassword}
+          DB_SSL_MODE=require
+
+          # Redis Configuration (ElastiCache)
+          REDIS_URL=${RedisUrl}
+
+          # Worker Configuration
+          WORKER_MODE=true
+          WORKER_CONCURRENCY=${WorkerConcurrency}
+          ENVIRONMENT=production
+
+          # Application Configuration
+          STORAGE_TYPE=s3
+
+          # Limits
+          MAX_FILE_SIZE=104857600
+          MAX_VIDEO_DURATION=30
+          OUTPUT_RESOLUTION=1280x720
+          OUTPUT_ASPECT_RATIO=16:9
+          EOF
+
+          # Copiar .env a back/
+          mkdir -p ${!APP_DIR}/back
+          cp ${!APP_DIR}/.env ${!APP_DIR}/back/.env
+
+          # Construir y levantar worker
+          # Deshabilitar BuildKit para compatibilidad con Amazon Linux 2023
+          export DOCKER_BUILDKIT=0
+          export COMPOSE_DOCKER_CLI_BUILD=0
+          
+          docker-compose -f docker-compose.worker.yml build --no-cache
+          docker-compose -f docker-compose.worker.yml up -d
+
+          # Health check
+          echo "Verificando que el worker está en ejecución..."
+          sleep 20
+
+          if docker ps | grep -q anb_worker; then
+              echo "✓ Worker está en ejecución"
+              docker logs anb_worker --tail 50
+          else
+              echo "✗ ERROR: El worker no se inició"
+              docker-compose -f docker-compose.worker.yml logs
+              exit 1
+          fi
+
+          echo "=========================================="
+          echo "Worker 1 configurado exitosamente"
+          echo "=========================================="
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-worker-1'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Type
+          Value: Worker
+
+  # Worker Instance 2 (Optional)
+  Worker2Instance:
+    Type: AWS::EC2::Instance
+    Condition: CreateWorker2
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref WorkerInstanceType
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: LabInstanceProfile
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      SubnetId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet2'
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # IMPORTANTE: NO usar 'set -e' para permitir debugging
+          exec > >(tee /var/log/user-data.log)
+          exec 2>&1
+
+          echo "=========================================="
+          echo "Iniciando configuración de Worker 2"
+          echo "Hora: $(date)"
+          echo "=========================================="
+
+          # Actualizar sistema
+          yum update -y
+          yum install -y docker git wget
+
+          # Iniciar Docker
+          systemctl enable docker
+          systemctl start docker
+
+          # Agregar ec2-user al grupo docker para evitar 'permission denied'
+          usermod -aG docker ec2-user
+
+          # Instalar Docker Compose
+          curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
+          # Instalar AWS CLI v2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          rm -rf aws awscliv2.zip
+
+          # Crear directorio de aplicación
+          APP_DIR="/opt/anb-worker"
+          mkdir -p ${!APP_DIR}
+          cd ${!APP_DIR}
+
+          # Esperar a que IAM Instance Profile esté disponible
+          echo "Esperando a que las credenciales de IAM estén disponibles..."
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              if aws sts get-caller-identity --region ${AWS::Region} > /dev/null 2>&1; then
+                  echo "✓ Credenciales de IAM disponibles"
+                  break
+              fi
+              ATTEMPT=$((ATTEMPT + 1))
+              echo "Intento $ATTEMPT/$MAX_ATTEMPTS - Esperando credenciales..."
+              sleep 10
+          done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "✗ ERROR: No se pudieron obtener credenciales de IAM después de $MAX_ATTEMPTS intentos"
+              exit 1
+          fi
+
+          # Descargar código desde S3
+          S3_BUCKET="${S3BucketName}"
+          echo "Descargando app.tar.gz desde s3://${!S3_BUCKET}/${DeploymentPackageS3Key}"
+          aws s3 cp s3://${!S3_BUCKET}/${DeploymentPackageS3Key} app.tar.gz --region ${AWS::Region}
+
+          if [ ! -f app.tar.gz ]; then
+              echo "✗ ERROR: No se pudo descargar app.tar.gz"
+              exit 1
+          fi
+
+          tar -xzf app.tar.gz
+          rm app.tar.gz
+
+          # Crear red Docker
+          docker network create anb_network || true
+
+          # Configurar variables de entorno
+          cat > ${!APP_DIR}/.env << 'EOF'
+          # AWS Configuration
+          AWS_REGION=${AWS::Region}
+          S3_BUCKET_NAME=${S3BucketName}
+          S3_UPLOAD_PREFIX=uploads
+          S3_PROCESSED_PREFIX=processed
+
+          # Database Configuration
+          DB_HOST=${DBHost}
+          DB_PORT=5432
+          DB_NAME=${DBName}
+          DB_USER=${DBUsername}
+          DB_PASSWORD=${DBPassword}
+          DB_SSL_MODE=disable
+
+          # Redis Configuration (ElastiCache)
+          REDIS_URL=${RedisUrl}
+
+          # Worker Configuration
+          WORKER_MODE=true
+          WORKER_CONCURRENCY=${WorkerConcurrency}
+          ENVIRONMENT=production
+
+          # Application Configuration
+          STORAGE_TYPE=s3
+
+          # Limits
+          MAX_FILE_SIZE=104857600
+          MAX_VIDEO_DURATION=30
+          OUTPUT_RESOLUTION=1280x720
+          OUTPUT_ASPECT_RATIO=16:9
+          EOF
+
+          # Copiar .env a back/
+          mkdir -p ${!APP_DIR}/back
+          cp ${!APP_DIR}/.env ${!APP_DIR}/back/.env
+
+          # Construir y levantar worker
+          docker-compose -f docker-compose.worker.yml build --no-cache
+          docker-compose -f docker-compose.worker.yml up -d
+
+          # Health check
+          echo "Verificando que el worker está en ejecución..."
+          sleep 20
+
+          if docker ps | grep -q anb_worker; then
+              echo "✓ Worker está en ejecución"
+          else
+              echo "✗ ERROR: El worker no se inició"
+              exit 1
+          fi
+
+          echo "=========================================="
+          echo "Worker 2 configurado exitosamente"
+          echo "=========================================="
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-worker-2'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Type
+          Value: Worker
+
+  # CloudWatch Alarms for Workers
+  Worker1HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-worker1-high-cpu'
+      AlarmDescription: Alert when Worker 1 CPU exceeds 85%
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 85
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref Worker1Instance
+
+  Worker1StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${EnvironmentName}-worker1-status-check'
+      AlarmDescription: Alert on Worker 1 instance status check failure
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref Worker1Instance
+
+Outputs:
+  Worker1InstanceId:
+    Description: Instance ID of Worker 1
+    Value: !Ref Worker1Instance
+    Export:
+      Name: !Sub '${EnvironmentName}-Worker1InstanceId'
+
+  Worker1PrivateIP:
+    Description: Private IP of Worker 1
+    Value: !GetAtt Worker1Instance.PrivateIp
+    Export:
+      Name: !Sub '${EnvironmentName}-Worker1PrivateIP'
+
+  Worker1PublicIP:
+    Description: Public IP of Worker 1
+    Value: !GetAtt Worker1Instance.PublicIp
+
+  Worker2InstanceId:
+    Condition: CreateWorker2
+    Description: Instance ID of Worker 2
+    Value: !Ref Worker2Instance
+    Export:
+      Name: !Sub '${EnvironmentName}-Worker2InstanceId'
+
+  Worker2PrivateIP:
+    Condition: CreateWorker2
+    Description: Private IP of Worker 2
+    Value: !GetAtt Worker2Instance.PrivateIp
+    Export:
+      Name: !Sub '${EnvironmentName}-Worker2PrivateIP'
+
+  Worker2PublicIP:
+    Condition: CreateWorker2
+    Description: Public IP of Worker 2
+    Value: !GetAtt Worker2Instance.PublicIp
