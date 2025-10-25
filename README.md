@@ -288,6 +288,15 @@ aws ec2 create-key-pair \
 chmod 400 anb-keypair.pem
 ```
 
+> Si al generar la anterior llave se presenta un mensaje como el siguiente: `An error occurred (InvalidKeyPair.Duplicate) when calling the CreateKeyPair operation: The keypair already exists`, se debe eliminar la llave previa o cambiar el nombre de la llave a utilizar.
+```bash 
+# Verificar las llaves existentes
+aws ec2 describe-key-pairs --query "KeyPairs[*].KeyName"
+
+# eliminar llave existente
+aws ec2 delete-key-pair --key-name anb-keypair
+```
+
 - Generar password
 ```bash
 # Generar JWT secret
