@@ -26,8 +26,8 @@ TOTAL_REQUESTS=1000
 TEST_DURATION=30
 
 # URLs basadas en la colección Postman
-BASE_URL="http://3.227.188.83"
-BASE_URL_HEALTH="http://3.227.188.83"
+BASE_URL="http://localhost"
+BASE_URL_HEALTH="http://localhost"
 
 # Headers comunes
 CONTENT_TYPE_HEADER="Content-Type: application/json"

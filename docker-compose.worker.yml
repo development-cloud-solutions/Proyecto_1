@@ -49,7 +49,7 @@ services:
       # Storage - Amazon S3
       - STORAGE_TYPE=${STORAGE_TYPE:-local}
       - AWS_REGION=${AWS_REGION:-us-east-1}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-anb-videos-bucket}
       - S3_UPLOAD_PREFIX=uploads
       - S3_PROCESSED_PREFIX=processed
 

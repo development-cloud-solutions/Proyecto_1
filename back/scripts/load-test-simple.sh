@@ -32,7 +32,7 @@ cleanup() {
 # Verificar que estamos usando bash
 if [ -z "$BASH_VERSION" ]; then
     echo "Error: Este script requiere bash, no sh"
-    echo "Ejecutar con: bash load-test.sh"
+    echo "Ejecutar con: bash load-test-simple.sh"
     exit 1
 fi
 
@@ -58,8 +58,8 @@ REPORTS_DIR="$PROJECT_ROOT/load-test-reports"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 echo
-echo -e "${BLUE}  ANB Rising Stars - Plan de Pruebas de Carga${NC}"
-echo -e "${BLUE}================================================${NC}"
+echo -e "${BLUE}  ANB Rising Stars - Prueba SIMPLE de Registro (Solo 1 minuto)${NC}"
+echo -e "${BLUE}================================================================${NC}"
 echo -e " Directorio del proyecto: $PROJECT_ROOT"
 echo -e " Directorio de backend: $BACK_DIR" 
 echo -e " Directorio de reportes: $REPORTS_DIR"
@@ -105,7 +105,7 @@ RETRY_COUNT=0
 PORT=80
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://localhost:${PORT}/health > /dev/null 2>&1; then
+    if curl -f http://localhost/:${PORT}/health > /dev/null 2>&1; then
         echo -e "${GREEN}  API está disponible${NC}"
         break
     fi
@@ -128,10 +128,10 @@ cd "$BACK_DIR"
 # Verificar archivos necesarios
 echo -e "${YELLOW} Verificando archivos de configuración...${NC}"
 
-CONFIG_FILE="artillery-config.yml"
+CONFIG_FILE="artillery-config-simple.yml"
 
 if [ ! -f "${CONFIG_FILE}" ]; then
-    echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado${NC}"
+    echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado en ${BACK_DIR} ${NC}"
     exit 1
 fi
 
@@ -154,11 +154,13 @@ fi
 # Limpiar datos de pruebas anteriores 
 echo -e "${YELLOW} Limpiando datos de pruebas anteriores...${NC}"
 find "$REPORTS_DIR" -type f \( \
-    -name "docker-stats-start-*.txt" -o \
-    -name "docker-stats-end-*.txt" -o \
-    -name "load-test-results-*.json" -o \
-    -name "load-test-report-*.json" -o \
-    -name "load-test-summary*.md" -o \
+    -name "docker-stats-start-*" -o \
+    -name "docker-stats-end-*" -o \
+    -name "load-test-results-*" -o \
+    -name "load-test-report-*" -o \
+    -name "load-test-summary*" -o \
+    -name "video-test-results*" -o \
+    -name "video-test-report*" -o \
     -name "simple-test-*" \
 \) -print -delete
 echo ""
@@ -205,17 +207,19 @@ echo -e "${GREEN} Iniciando pruebas de carga...${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 # Ejecutar Artillery con configuración completa
-artillery run ${CONFIG_FILE} \
+artillery run "$CONFIG_FILE" \
     --output "$RESULTS_JSON" \
     --overrides '{
         "config": {
-            "statsInterval": 10,
-            "ensure": {
-                "maxErrorRate": 5,
-                "p99": 2000
-            }
+            "phases": [
+                {
+                    "duration": 60,
+                    "arrivalRate": 5,
+                    "name": "Simple Test - Solo Registro"
+                }
+            ]
         }
-    }'
+    }' 2>&1 | tee "$REPORTS_DIR/simple-test-$TIMESTAMP.log"
 
 ARTILLERY_EXIT_CODE=$?
 

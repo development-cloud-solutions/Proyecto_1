@@ -63,7 +63,7 @@ module.exports = {
 
     const requestOptions = {
       method: 'POST',
-      host: '3.227.188.83',
+      host: 'localhost',
       port: 80,
       path: '/api/videos/upload',
       headers: {

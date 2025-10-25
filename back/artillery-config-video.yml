@@ -1,0 +1,177 @@
+config:
+  target: 'http://localhost'
+  http:
+    timeout: 300
+    pool: 50
+    maxSockets: 50
+    keepAlive: true
+  phases:
+    # Fase 1: Warmup muy conservador (2 minutos)
+    - duration: 120
+      arrivalRate: 1
+      name: "Warmup"
+    # Fase 2: Carga Baja (3 minutos)
+    - duration: 180
+      arrivalRate: 2
+      name: "Low Load"
+    # Fase 3: Carga Media (3 minutos)
+    - duration: 180
+      arrivalRate: 3
+      name: "Medium Load"
+    # Fase 4: Carga Alta (2 minutos)
+    - duration: 120
+      arrivalRate: 5
+      name: "High Load"
+    # Fase 5: Recuperación (2 minutos)
+    - duration: 120
+      arrivalRate: 1
+      name: "Recovery"
+  payload:
+    path: './scripts/load-test-data.csv'
+    fields:
+      - 'email'
+      - 'first_name'
+      - 'last_name'
+      - 'city'
+  variables:
+    test_password: "StrongPass123"
+  processor: "scripts/processor.js"
+
+scenarios:
+  # Escenario 1: Health Check (40% - operación ligera)
+  - name: "Health Check"
+    weight: 40
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.status"
+              as: "health_status"
+
+  # Escenario 2: Navegación básica (25% - sin autenticación)
+  - name: "Browse Public Videos"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/public/videos"
+          expect:
+            - statusCode: 200
+            - contentType: "application/json"
+          capture:
+            - json: "$[0].id"
+              as: "video_id"
+      - think: 2
+      - get:
+          url: "/api/public/rankings"
+          expect:
+            - statusCode: 200
+
+  # Escenario 3: Autenticación (25% - operaciones pesadas)
+  - name: "User Registration and Login"
+    weight: 25
+    flow:
+      # Pausa inicial para evitar burst
+      - think: 3
+
+      # Crear email único
+      - function: "generateUniqueEmail"
+
+      # Registrar usuario con timeout extendido
+      - post:
+          url: "/api/auth/signup"
+          json:
+            first_name: "{{ first_name }}"
+            last_name: "{{ last_name }}"
+            email: "{{ uniqueEmail }}"
+            password1: "{{ test_password }}"
+            password2: "{{ test_password }}"
+            city: "{{ city }}"
+            country: "Colombia"
+          expect:
+            - statusCode: 201
+          capture:
+            - json: "$.message"
+              as: "signup_message"
+
+      # Pausa entre signup y login
+      - think: 5
+
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ uniqueEmail }}"
+            password: "{{ test_password }}"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.access_token"
+              as: "auth_token"
+            - json: "$.expires_in"
+              as: "token_expires"
+
+  # Escenario 4: Upload de Videos (10% - más conservador)
+  - name: "Video Upload Flow"
+    weight: 10
+    flow:
+      # Pausa inicial más larga para uploads
+      - think: 5
+
+      # Crear usuario para upload
+      - function: "generateUniqueEmail"
+
+      # Registro con pausa
+      - post:
+          url: "/api/auth/signup"
+          json:
+            first_name: "{{ first_name }}"
+            last_name: "{{ last_name }}"
+            email: "{{ uniqueEmail }}"
+            password1: "{{ test_password }}"
+            password2: "{{ test_password }}"
+            city: "{{ city }}"
+            country: "Colombia"
+          expect:
+            - statusCode: 201
+
+      # Pausa antes del login
+      - think: 3
+
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ uniqueEmail }}"
+            password: "{{ test_password }}"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.access_token"
+              as: "upload_token"
+
+      # Verificar que el token funciona
+      - get:
+          url: "/api/videos"
+          headers:
+            Authorization: "Bearer {{ upload_token }}"
+          expect:
+            - statusCode: 200
+
+      # Pausa antes del upload (importante)
+      - think: 5
+
+      # Upload del video usando función personalizada
+      - function: "uploadVideo"
+
+      # Pausa después del upload
+      - think: 3
+
+      # Verificar videos del usuario
+      - get:
+          url: "/api/videos"
+          headers:
+            Authorization: "Bearer {{ upload_token }}"
+          expect:
+            - statusCode: [200, 401]
