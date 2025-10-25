@@ -1675,3 +1675,5 @@ FodyWeavers.xsd
 deployment-package/
 
 *.pem
+package-lock.json
+package.json
