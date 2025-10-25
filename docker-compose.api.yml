@@ -66,9 +66,9 @@ services:
       - ENVIRONMENT=production
 
       # Database - Amazon RDS PostgreSQL
-      - DB_DRIVER=postgres
+      - DB_DRIVER=${DB_DRIVER:-postgres}
       - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=5432
+      - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-proyecto_1}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
@@ -89,8 +89,8 @@ services:
       - S3_PROCESSED_PREFIX=${S3_PROCESSED_PREFIX:-processed}
 
       # Legacy paths (no se usan con S3, pero se mantienen para compatibilidad)
-      - UPLOAD_PATH=/app/uploads
-      - PROCESSED_PATH=/app/processed
+      - UPLOAD_PATH=${UPLOAD_PATH:-/app/uploads}
+      - PROCESSED_PATH=${PROCESSED_PATH:-/app/processed}
 
       # Limits
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}

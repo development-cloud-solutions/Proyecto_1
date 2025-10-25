@@ -87,9 +87,9 @@ services:
       - GIN_MODE=debug
       
       # Database configuration
-      - DB_DRIVER=postgres
+      - DB_DRIVER=${DB_DRIVER:-postgres}
       - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=5432
+      - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-proyecto_1}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
@@ -109,8 +109,9 @@ services:
       - S3_UPLOAD_PREFIX=${S3_UPLOAD_PREFIX:-uploads}
       - S3_PROCESSED_PREFIX=${S3_PROCESSED_PREFIX:-processed}
 
-      - UPLOAD_PATH=/app/uploads
-      - PROCESSED_PATH=/app/processed
+      # Storage local
+      - UPLOAD_PATH=${UPLOAD_PATH:-/app/uploads}
+      - PROCESSED_PATH=${PROCESSED_PATH:-/app/processed}
 
       # Limits
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}
@@ -155,9 +156,9 @@ services:
       - TZ=America/Bogota
 
       # Database configuration
-      - DB_DRIVER=postgres
+      - DB_DRIVER=${DB_DRIVER:-postgres}
       - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=5432
+      - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-proyecto_1}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
@@ -171,17 +172,18 @@ services:
       - ENVIRONMENT=production
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4} # Concurrencia
 
-      # Storage
+      # Storage S3
       - STORAGE_TYPE=${STORAGE_TYPE:-local}
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME:-anb-videos-bucket}
-      - S3_UPLOAD_PREFIX=uploads
-      - S3_PROCESSED_PREFIX=processed
+      - S3_UPLOAD_PREFIX=${S3_UPLOAD_PREFIX:-uploads}
+      - S3_PROCESSED_PREFIX=${S3_PROCESSED_PREFIX:-processed}
 
       - ENVIRONMENT=development
 
-      - UPLOAD_PATH=/app/uploads
-      - PROCESSED_PATH=/app/processed
+      # Storage local
+      - UPLOAD_PATH=${UPLOAD_PATH:-/app/uploads}
+      - PROCESSED_PATH=${PROCESSED_PATH:-/app/processed}
 
       # Limits
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}
