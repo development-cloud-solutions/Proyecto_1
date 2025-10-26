@@ -358,7 +358,7 @@ Resources:
           DB_NAME=${DBName}
           DB_USER=${DBUsername}
           DB_PASSWORD=${DBPassword}
-          DB_SSL_MODE=disable
+          DB_SSL_MODE=require
 
           # Redis Configuration (ElastiCache)
           REDIS_URL=${RedisUrl}

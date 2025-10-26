@@ -243,6 +243,10 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
           Description: SSH from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-ec2-sg
