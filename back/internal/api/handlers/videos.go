@@ -149,6 +149,13 @@ func (h *VideoHandler) GetMyVideos(c *gin.Context) {
 		return
 	}
 
+	// Generar URLs públicas para todos los videos procesados
+	for i := range videos {
+		if videos[i].ProcessedURL != nil {
+			videos[i].ProcessedURL = h.videoService.GeneratePublicURL(videos[i].ProcessedURL)
+		}
+	}
+
 	c.JSON(http.StatusOK, videos)
 }
 
@@ -188,6 +195,11 @@ func (h *VideoHandler) GetVideoDetail(c *gin.Context) {
 			Error: "Failed to retrieve video",
 		})
 		return
+	}
+
+	// Generar URL pública si el video está procesado
+	if video.ProcessedURL != nil {
+		video.ProcessedURL = h.videoService.GeneratePublicURL(video.ProcessedURL)
 	}
 
 	c.JSON(http.StatusOK, video)

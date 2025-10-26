@@ -61,7 +61,7 @@ func main() {
 	// Inicializar worker si está en modo worker
 	if os.Getenv("WORKER_MODE") == "true" {
 		log.Println("Starting in worker mode...")
-		worker := workers.NewVideoProcessor(taskQueue, db, videoService)
+		worker := workers.NewVideoProcessor(taskQueue, db, videoService, fileStorage)
 		worker.Start()
 		return
 	}

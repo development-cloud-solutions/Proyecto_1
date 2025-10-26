@@ -233,14 +233,27 @@ func (s *S3Storage) UploadProcessedFile(localPath, videoID string) error {
 
 // getS3Key construye el key completo en S3 basado en el path
 func (s *S3Storage) getS3Key(path string) string {
-	// Si ya tiene un prefijo conocido, retornarlo tal cual
+	// Si ya tiene un prefijo conocido (uploads o processed), retornarlo tal cual
 	if filepath.HasPrefix(path, s.uploadPrefix) || filepath.HasPrefix(path, s.processedPrefix) {
 		return path
 	}
 
-	// Si parece ser un path absoluto o relativo, determinar el prefijo correcto
+	// Detectar si usa el prefijo genérico "processed/"
+	if filepath.HasPrefix(path, "processed/") || filepath.HasPrefix(path, "processed\\") {
+		// Remover "processed/" y construir con el prefijo S3 configurado
+		fileName := filepath.Base(path)
+		return filepath.Join(s.processedPrefix, fileName)
+	}
+
+	// Detectar si usa el prefijo genérico "uploads/"
+	if filepath.HasPrefix(path, "uploads/") || filepath.HasPrefix(path, "uploads\\") {
+		// Remover "uploads/" y construir con el prefijo S3 configurado
+		fileName := filepath.Base(path)
+		return filepath.Join(s.uploadPrefix, fileName)
+	}
+
+	// Por defecto, asumir que es un archivo de upload
 	if filepath.Ext(path) != "" {
-		// Asumimos que es un archivo de upload por defecto
 		return filepath.Join(s.uploadPrefix, filepath.Base(path))
 	}
 
@@ -260,4 +273,117 @@ func (s *S3Storage) EnsureBucketExists() error {
 	}
 
 	return nil
+}
+
+// DownloadToFile descarga un archivo de S3 a un path local (para procesamiento de videos)
+// sourcePath: ruta relativa en S3 (ej: "video-123.mp4" o "uploads/video-123.mp4")
+// destPath: ruta absoluta local donde guardar (ej: "/tmp/video-123.mp4")
+func (s *S3Storage) DownloadToFile(sourcePath string, destPath string) error {
+	ctx := context.TODO()
+
+	key := s.getS3Key(sourcePath)
+
+	// Descargar desde S3
+	result, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("error downloading from S3 (key=%s): %w", key, err)
+	}
+	defer result.Body.Close()
+
+	// Crear el archivo local
+	outFile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("error creating local file %s: %w", destPath, err)
+	}
+	defer outFile.Close()
+
+	// Copiar contenido de S3 al archivo local
+	_, err = io.Copy(outFile, result.Body)
+	if err != nil {
+		return fmt.Errorf("error writing to local file: %w", err)
+	}
+
+	return nil
+}
+
+// UploadFromFile sube un archivo local a S3 (para videos procesados)
+// sourcePath: ruta absoluta local del archivo (ej: "/tmp/video-123_processed.mp4")
+// destPath: ruta relativa en S3 donde guardar (ej: "video-123_processed.mp4" o "processed/video-123_processed.mp4")
+func (s *S3Storage) UploadFromFile(sourcePath string, destPath string) error {
+	ctx := context.TODO()
+
+	// Abrir el archivo local
+	file, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("error opening local file %s: %w", sourcePath, err)
+	}
+	defer file.Close()
+
+	// Leer todo el contenido del archivo
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("error reading local file: %w", err)
+	}
+
+	key := s.getS3Key(destPath)
+
+	// Subir a S3
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucketName),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(data),
+		ContentType: aws.String("video/mp4"),
+		Metadata: map[string]string{
+			"processed-at": time.Now().Format(time.RFC3339),
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("error uploading to S3 (key=%s): %w", key, err)
+	}
+
+	return nil
+}
+
+// GetPublicURL genera una URL presignada de S3 para acceder al video procesado
+// processedPath: ruta guardada en BD (ej: "/videos/video-123_processed.mp4")
+func (s *S3Storage) GetPublicURL(processedPath string) (string, error) {
+	ctx := context.TODO()
+
+	// Extraer el nombre del archivo desde la ruta
+	// Si viene como "/videos/video-123_processed.mp4", extraer "video-123_processed.mp4"
+	filename := filepath.Base(processedPath)
+
+	// Construir el key de S3
+	key := filepath.Join(s.processedPrefix, filename)
+
+	// Verificar que el objeto existe
+	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("processed file not found in S3: %w", err)
+	}
+
+	// Crear un presigned client
+	presignClient := s3.NewPresignClient(s.client)
+
+	// Generar URL presignada válida por 1 hora
+	request, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Hour * 1
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("error generating presigned URL: %w", err)
+	}
+
+	return request.URL, nil
 }

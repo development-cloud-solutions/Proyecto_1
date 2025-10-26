@@ -11,6 +11,7 @@ import (
 
 	"back/internal/config"
 	"back/internal/services"
+	"back/internal/services/storage"
 	"back/internal/utils"
 
 	"github.com/hibiken/asynq"
@@ -28,10 +29,11 @@ type VideoProcessor struct {
 	db           *sql.DB
 	config       *config.Config
 	videoService services.VideoServiceInterface
+	storage      storage.Storage
 }
 
 // NewVideoProcessor crea un procesador listo para Start()
-func NewVideoProcessor(queue *TaskQueue, db *sql.DB, videoService services.VideoServiceInterface) *VideoProcessor {
+func NewVideoProcessor(queue *TaskQueue, db *sql.DB, videoService services.VideoServiceInterface, fileStorage storage.Storage) *VideoProcessor {
 	redisOpt := asynq.RedisClientOpt{
 		Addr: queue.cfg.RedisURL,
 	}
@@ -47,6 +49,7 @@ func NewVideoProcessor(queue *TaskQueue, db *sql.DB, videoService services.Video
 		db:           db,
 		config:       queue.cfg,
 		videoService: videoService,
+		storage:      fileStorage,
 	}
 
 	mux.HandleFunc(TypeVideoProcessing, vp.HandleVideoProcessing)
@@ -88,9 +91,23 @@ func (vp *VideoProcessor) HandleVideoProcessing(ctx context.Context, t *asynq.Ta
 		return fmt.Errorf("video not found or database error: %v", err)
 	}
 
-	// Rutas de archivo
-	srcPath := filepath.Join(vp.config.UploadPath, *video.OriginalURL)
-	dstPath := filepath.Join(vp.config.ProcessedPath, fmt.Sprintf("%s_processed.mp4", payload.VideoID))
+	// === NUEVO: Descargar video desde storage (S3 o local) a /tmp ===
+	tmpInputPath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_input.mp4", payload.VideoID))
+	tmpOutputPath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_output.mp4", payload.VideoID))
+
+	// Limpiar archivos temporales al final
+	defer os.Remove(tmpInputPath)
+	defer os.Remove(tmpOutputPath)
+
+	log.Printf("Downloading video from storage: %s", *video.OriginalURL)
+	if err := vp.storage.DownloadToFile(*video.OriginalURL, tmpInputPath); err != nil {
+		_ = vp.videoService.MarkFailed(payload.VideoID, "failed to download video from storage")
+		return fmt.Errorf("failed to download video: %v", err)
+	}
+
+	// Ahora usamos el archivo temporal descargado
+	srcPath := tmpInputPath
+	dstPath := tmpOutputPath
 
 	// 1. Validar duración del video
 	duration, err := utils.GetVideoDuration(srcPath)
@@ -151,12 +168,25 @@ func (vp *VideoProcessor) HandleVideoProcessing(ctx context.Context, t *asynq.Ta
 		}
 	}
 
-	// 5. Marcar video como procesado con URL web en lugar de ruta del sistema
+	// === NUEVO: Subir video procesado al storage (S3 o local) ===
+	// Usar el prefijo "processed/" para que el storage detecte automáticamente
+	// dónde guardar según la configuración (PROCESSED_PATH o S3_PROCESSED_PREFIX)
+	processedRelativePath := fmt.Sprintf("processed/%s_processed.mp4", payload.VideoID)
+	log.Printf("Uploading processed video to storage: %s", processedRelativePath)
+
+	if err := vp.storage.UploadFromFile(dstPath, processedRelativePath); err != nil {
+		_ = vp.videoService.MarkFailed(payload.VideoID, "failed to upload processed video to storage")
+		return fmt.Errorf("failed to upload processed video: %v", err)
+	}
+
+	// Marcar video como procesado con la ruta web relativa
+	// Para local: nginx sirve /videos/ desde /app/processed/
+	// Para S3: se generará presigned URL en el handler
 	webURL := fmt.Sprintf("/videos/%s_processed.mp4", payload.VideoID)
 	if err := vp.videoService.MarkProcessed(payload.VideoID, webURL); err != nil {
 		return fmt.Errorf("failed to mark processed: %v", err)
 	}
 
-	log.Printf("Processed video: %s", payload.VideoID)
+	log.Printf("Successfully processed video: %s", payload.VideoID)
 	return nil
 }

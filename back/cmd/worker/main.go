@@ -36,6 +36,6 @@ func main() {
 	taskQueue := workers.NewTaskQueue(cfg)
 
 	log.Println("Starting in worker mode...")
-	worker := workers.NewVideoProcessor(taskQueue, db, videoService)
+	worker := workers.NewVideoProcessor(taskQueue, db, videoService, fileStorage)
 	worker.Start()
 }

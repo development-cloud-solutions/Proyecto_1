@@ -22,10 +22,11 @@ type RankingHandler struct {
 }
 
 // NewRankingHandler crea una instancia del handler para inyectar dependencias
-func NewRankingHandler(db *sql.DB, cfg *config.Config) *RankingHandler {
+func NewRankingHandler(db *sql.DB, cfg *config.Config, videoService services.VideoServiceInterface) *RankingHandler {
 	return &RankingHandler{
 		db:             db,
 		config:         cfg,
+		videoService:   videoService,
 		rankingService: services.NewRankingService(db, cfg),
 	}
 }
@@ -97,6 +98,13 @@ func (h *RankingHandler) ListPublicVideos(c *gin.Context) {
 			})
 			return
 		}
+
+		// Generar URL pública (presignada para S3, relativa para local)
+		if video.ProcessedURL != nil {
+			publicURL := h.videoService.GeneratePublicURL(video.ProcessedURL)
+			video.ProcessedURL = publicURL
+		}
+
 		videos = append(videos, video)
 	}
 
@@ -260,6 +268,17 @@ func (h *RankingHandler) GetRankings(c *gin.Context) {
 		return
 	}
 
+	// Generar URLs públicas para todos los videos en el ranking
+	for i := range rankings {
+		if rankings[i].VideoURL != "" {
+			videoURL := rankings[i].VideoURL
+			publicURL := h.videoService.GeneratePublicURL(&videoURL)
+			if publicURL != nil {
+				rankings[i].VideoURL = *publicURL
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, rankings)
 }
 
@@ -278,6 +297,17 @@ func (h *RankingHandler) GetTopRankings(c *gin.Context) {
 			Error: "Failed to retrieve top rankings",
 		})
 		return
+	}
+
+	// Generar URLs públicas para todos los videos en el ranking
+	for i := range rankings {
+		if rankings[i].VideoURL != "" {
+			videoURL := rankings[i].VideoURL
+			publicURL := h.videoService.GeneratePublicURL(&videoURL)
+			if publicURL != nil {
+				rankings[i].VideoURL = *publicURL
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, rankings)
