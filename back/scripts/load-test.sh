@@ -98,6 +98,17 @@ if pgrep -f "artillery" > /dev/null 2>&1; then
     sleep 2
 fi
 
+# Configurar URL del target (AWS ALB o localhost para desarrollo)
+if [ -z "$API_TARGET_URL" ]; then
+    API_TARGET_URL="http://localhost"
+    echo -e "${BLUE}  Usando URL por defecto: ${API_TARGET_URL}${NC}"
+else
+    echo -e "${BLUE}  Usando URL personalizada (AWS): ${API_TARGET_URL}${NC}"
+fi
+
+# Exportar para que esté disponible en Artillery y processor.js
+export API_TARGET_URL
+
 # Verificar que la API está disponible
 echo -e "${YELLOW} Verificando que la API esté disponible...${NC}"
 MAX_RETRIES=10
@@ -105,19 +116,20 @@ RETRY_COUNT=0
 PORT=80
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://localhost:${PORT}/health > /dev/null 2>&1; then
-        echo -e "${GREEN}  API está disponible${NC}"
+    if curl -f ${API_TARGET_URL}/health > /dev/null 2>&1; then
+        echo -e "${GREEN}  API está disponible en ${API_TARGET_URL}${NC}"
         break
     fi
-    
+
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo -e "${RED}  API no está disponible después de $MAX_RETRIES intentos${NC}"
-        echo -e "${RED}  Verifique que la aplicación esté ejecutándose en el puerto ${PORT} ${NC}"
-        echo -e "${RED}  Puede iniciar la aplicación con: docker-compose up -d${NC}"
+        echo -e "${RED}  URL: ${API_TARGET_URL}${NC}"
+        echo -e "${RED}  Para usar localhost: export API_TARGET_URL='http://localhost'${NC}"
+        echo -e "${RED}  Para AWS: export API_TARGET_URL='http://your-elb.amazonaws.com'${NC}"
         exit 1
     fi
-    
+
     echo -e "${YELLOW}  Intento $RETRY_COUNT/$MAX_RETRIES - Esperando 3 segundos...${NC}"
     sleep 3
 done
@@ -131,7 +143,7 @@ echo -e "${YELLOW} Verificando archivos de configuración...${NC}"
 CONFIG_FILE="artillery-config.yml"
 
 if [ ! -f "${CONFIG_FILE}" ]; then
-    echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado${NC}"
+    echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado en ${BACK_DIR} ${NC}"
     exit 1
 fi
 
@@ -154,12 +166,15 @@ fi
 # Limpiar datos de pruebas anteriores 
 echo -e "${YELLOW} Limpiando datos de pruebas anteriores...${NC}"
 find "$REPORTS_DIR" -type f \( \
-    -name "docker-stats-start-*.txt" -o \
-    -name "docker-stats-end-*.txt" -o \
-    -name "load-test-results-*.json" -o \
-    -name "load-test-report-*.json" -o \
-    -name "load-test-summary*.md" -o \
-    -name "simple-test-*" \
+    -name "docker-stats-start-*" -o \
+    -name "docker-stats-end-*" -o \
+    -name "load-test-results-*" -o \
+    -name "load-test-report-*" -o \
+    -name "load-test-summary*" -o \
+    -name "video-test-results*" -o \
+    -name "video-test-report*" -o \
+    -name "simple-test-*" -o \
+    -name "test-*" \
 \) -print -delete
 echo ""
 
@@ -215,7 +230,7 @@ artillery run ${CONFIG_FILE} \
                 "p99": 2000
             }
         }
-    }'
+    }' 2>&1 | tee "$REPORTS_DIR/test-$TIMESTAMP.log"
 
 ARTILLERY_EXIT_CODE=$?
 
@@ -345,7 +360,7 @@ cat > "$SUMMARY_FILE" << EOF
 
 ## Configuración de Prueba
 
-- **Target**: http://localhost/:${PORT}
+- **Target**: ${API_TARGET_URL}
 - **Fases**: 6 (Warmup → Normal → Media → Alta → Pico → Recuperación)
 - **Usuarios máximos**: 200 usuarios/segundo
 - **Escenarios**: Navegación básica (60%), Autenticación (25%), Interacción avanzada (10%), Upload videos (5%)

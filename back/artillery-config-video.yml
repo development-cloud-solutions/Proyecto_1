@@ -1,5 +1,5 @@
 config:
-  target: 'http://localhost'
+  target: '{{ $processEnvironment.API_TARGET_URL }}'
   http:
     timeout: 300
     pool: 50

@@ -61,10 +61,14 @@ module.exports = {
     form.append('title', `Load Test Video ${Math.floor(Math.random() * 10000)}`);
     form.append('is_public', 'true');
 
+    // Obtener target URL de variable de entorno con fallback a localhost
+    const targetUrl = process.env.API_TARGET_URL || 'http://localhost';
+    const url = new URL(targetUrl);
+
     const requestOptions = {
       method: 'POST',
-      host: 'localhost',
-      port: 80,
+      host: url.hostname,
+      port: url.port || 80,
       path: '/api/videos/upload',
       headers: {
         ...form.getHeaders(),

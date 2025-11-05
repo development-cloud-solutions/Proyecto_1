@@ -98,6 +98,17 @@ if pgrep -f "artillery" > /dev/null 2>&1; then
     sleep 2
 fi
 
+# Configurar URL del target (AWS ALB o localhost para desarrollo)
+if [ -z "$API_TARGET_URL" ]; then
+    API_TARGET_URL="http://localhost"
+    echo -e "${BLUE}  Usando URL por defecto: ${API_TARGET_URL}${NC}"
+else
+    echo -e "${BLUE}  Usando URL personalizada (AWS): ${API_TARGET_URL}${NC}"
+fi
+
+# Exportar para que esté disponible en Artillery y processor.js
+export API_TARGET_URL
+
 # Verificar que la API está disponible
 echo -e "${YELLOW} Verificando que la API esté disponible...${NC}"
 MAX_RETRIES=10
@@ -105,19 +116,20 @@ RETRY_COUNT=0
 PORT=80
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://localhost/:${PORT}/health > /dev/null 2>&1; then
-        echo -e "${GREEN}  API está disponible${NC}"
+    if curl -f ${API_TARGET_URL}/health > /dev/null 2>&1; then
+        echo -e "${GREEN}  API está disponible en ${API_TARGET_URL}${NC}"
         break
     fi
-    
+
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo -e "${RED}  API no está disponible después de $MAX_RETRIES intentos${NC}"
-        echo -e "${RED}  Verifique que la aplicación esté ejecutándose en el puerto ${PORT} ${NC}"
-        echo -e "${RED}  Puede iniciar la aplicación con: docker-compose up -d${NC}"
+        echo -e "${RED}  URL: ${API_TARGET_URL}${NC}"
+        echo -e "${RED}  Para usar localhost: export API_TARGET_URL='http://localhost'${NC}"
+        echo -e "${RED}  Para AWS: export API_TARGET_URL='http://your-elb.amazonaws.com'${NC}"
         exit 1
     fi
-    
+
     echo -e "${YELLOW}  Intento $RETRY_COUNT/$MAX_RETRIES - Esperando 3 segundos...${NC}"
     sleep 3
 done
@@ -161,7 +173,8 @@ find "$REPORTS_DIR" -type f \( \
     -name "load-test-summary*" -o \
     -name "video-test-results*" -o \
     -name "video-test-report*" -o \
-    -name "simple-test-*" \
+    -name "simple-test-*" -o \
+    -name "test-*" \
 \) -print -delete
 echo ""
 
@@ -344,15 +357,15 @@ SUMMARY_FILE="$REPORTS_DIR/load-test-summary-$TIMESTAMP.md"
 cat > "$SUMMARY_FILE" << EOF
 # Resumen de Pruebas de Carga - ANB Rising Stars
 
-**Fecha de ejecución**: $(date)  
-**Duración total**: 19 minutos (6 fases)  
+**Fecha de ejecución**: $(date)
+**Duración total**: Prueba Simple - Solo Registro (1 minuto)
 
 ## Configuración de Prueba
 
-- **Target**: http://localhost/:${PORT}
-- **Fases**: 6 (Warmup → Normal → Media → Alta → Pico → Recuperación)
-- **Usuarios máximos**: 200 usuarios/segundo
-- **Escenarios**: Navegación básica (60%), Autenticación (25%), Interacción avanzada (10%), Upload videos (5%)
+- **Target**: ${API_TARGET_URL}
+- **Fase**: Simple Test (1 minuto) - 5 usuarios/segundo
+- **Escenarios**: Registro de usuarios únicos
+- **Tipo**: Prueba de registro simple
 
 ## Archivos Generados
 
