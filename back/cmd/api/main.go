@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -56,13 +57,22 @@ func main() {
 	}
 
 	videoService := services.NewVideoService(db, cfg, fileStorage)
-	taskQueue := workers.NewTaskQueue(cfg)
+
+	// Crear TaskQueue con soporte dual Redis/SQS
+	taskQueue, err := workers.NewTaskQueue(cfg)
+	if err != nil {
+		log.Fatal("Failed to create task queue:", err)
+	}
+	defer taskQueue.Close()
 
 	// Inicializar worker si está en modo worker
 	if os.Getenv("WORKER_MODE") == "true" {
 		log.Println("Starting in worker mode...")
+		log.Println("WARNING: WORKER_MODE in API is deprecated. Use cmd/worker/main.go instead")
 		worker := workers.NewVideoProcessor(taskQueue, db, videoService, fileStorage)
-		worker.Start()
+		if err := worker.Start(context.Background()); err != nil {
+			log.Fatal("Worker error:", err)
+		}
 		return
 	}
 

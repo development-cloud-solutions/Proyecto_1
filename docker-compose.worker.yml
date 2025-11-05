@@ -38,8 +38,11 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_SSL_MODE=${DB_SSL_MODE:-disable}
 
-      # Redis - Compartido con API layer
+      # Queue Configuration - Dual support Redis/SQS
+      - QUEUE_TYPE=${QUEUE_TYPE:-redis}
       - REDIS_URL=${REDIS_URL:-redis:6379}
+      - SQS_REGION=${SQS_REGION:-us-east-1}
+      - SQS_QUEUE_URL=${SQS_QUEUE_URL:-}
 
       # Worker configuration
       - WORKER_MODE=${WORKER_MODE:-true}
