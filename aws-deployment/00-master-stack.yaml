@@ -31,15 +31,26 @@ Metadata:
           - DesiredCapacity
           - CPUTargetValue
       - Label:
-          default: Worker Configuration
+          default: Worker Auto Scaling Configuration
         Parameters:
           - WorkerInstanceType
-          - NumberOfWorkers
+          - WorkerMinSize
+          - WorkerMaxSize
+          - WorkerDesiredCapacity
           - WorkerConcurrency
+          - TargetQueueDepth
       - Label:
-          default: ElastiCache Configuration
+          default: SQS Queue Configuration
         Parameters:
-          - RedisCacheNodeType
+          - MessageRetentionPeriod
+          - VisibilityTimeout
+          - MaxReceiveCount
+      # ElastiCache Redis - COMENTADO (Solo se usa en desarrollo local)
+      # Para producción AWS, se usa SQS en lugar de Redis para la cola de mensajes
+      # - Label:
+      #     default: ElastiCache Configuration
+      #   Parameters:
+      #     - RedisCacheNodeType
       - Label:
           default: Network Configuration
         Parameters:
@@ -139,7 +150,7 @@ Parameters:
     MinValue: 40
     MaxValue: 90
 
-  # Workers
+  # Workers Auto Scaling
   WorkerInstanceType:
     Description: EC2 instance type for Worker servers
     Type: String
@@ -149,12 +160,25 @@ Parameters:
       - t3.small
       - t3.medium
 
-  NumberOfWorkers:
-    Description: Number of worker instances
+  WorkerMinSize:
+    Description: Minimum worker instances in Auto Scaling Group
     Type: Number
     Default: 1
-    MinValue: 1
+    MinValue: 0
     MaxValue: 3
+
+  WorkerMaxSize:
+    Description: Maximum worker instances in Auto Scaling Group
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 10
+
+  WorkerDesiredCapacity:
+    Description: Desired worker instances in Auto Scaling Group
+    Type: Number
+    Default: 1
+    MinValue: 0
 
   WorkerConcurrency:
     Description: Concurrent video tasks per worker
@@ -162,6 +186,35 @@ Parameters:
     Default: 4
     MinValue: 1
     MaxValue: 12
+
+  TargetQueueDepth:
+    Description: Target queue depth per worker for auto scaling
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+
+  # SQS Configuration
+  MessageRetentionPeriod:
+    Description: SQS message retention period in seconds (4 days default)
+    Type: Number
+    Default: 345600
+    MinValue: 60
+    MaxValue: 1209600
+
+  VisibilityTimeout:
+    Description: SQS visibility timeout in seconds (15 min default)
+    Type: Number
+    Default: 900
+    MinValue: 0
+    MaxValue: 43200
+
+  MaxReceiveCount:
+    Description: Max receive count before sending to DLQ
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 1000
 
   # Network
   VpcCIDR:
@@ -267,27 +320,49 @@ Resources:
         - Key: Name
           Value: !Sub '${EnvironmentName}-s3-iam-stack'
 
-  # 4. ElastiCache Redis
-  ElastiCacheStack:
+  # 4. ElastiCache Redis - COMENTADO
+  # NOTA: ElastiCache Redis NO es necesario en AWS para esta entrega
+  # - Para la cola de mensajes usamos SQS (ver stack 4.5)
+  # - Redis solo se usa en desarrollo local con docker-compose
+  # - Si en el futuro necesitas Redis para caché/sesiones, descomenta este bloque
+  #
+  # ElastiCacheStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn:
+  #     - VPCStack
+  #     - EC2SecurityGroup
+  #   Properties:
+  #     TemplateURL: !If
+  #       - UseS3Templates
+  #       - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/03-elasticache.yaml'
+  #       - './03-elasticache.yaml'
+  #     Parameters:
+  #       EnvironmentName: !Ref EnvironmentName
+  #       VpcId: !GetAtt VPCStack.Outputs.VPCId
+  #       PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnets
+  #       PublicSubnetIds: !GetAtt VPCStack.Outputs.PublicSubnets
+  #       InstanceSecurityGroup: !Ref EC2SecurityGroup
+  #       KeyPairName: !Ref KeyPairName
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub '${EnvironmentName}-elasticache-stack'
+
+  # 4.5. Amazon SQS Queue for Video Processing
+  SQSStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn:
-      - VPCStack
-      - EC2SecurityGroup
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/03-elasticache.yaml'
-        - './03-elasticache.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/03.5-sqs-queue.yaml'
+        - './03.5-sqs-queue.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
-        VpcId: !GetAtt VPCStack.Outputs.VPCId
-        PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnets
-        PublicSubnetIds: !GetAtt VPCStack.Outputs.PublicSubnets
-        InstanceSecurityGroup: !Ref EC2SecurityGroup
-        KeyPairName: !Ref KeyPairName
+        MessageRetentionPeriod: !Ref MessageRetentionPeriod
+        VisibilityTimeout: !Ref VisibilityTimeout
+        MaxReceiveCount: !Ref MaxReceiveCount
       Tags:
         - Key: Name
-          Value: !Sub '${EnvironmentName}-elasticache-stack'
+          Value: !Sub '${EnvironmentName}-sqs-stack'
 
   # 5. RDS Database
   RDSStack:
@@ -319,7 +394,7 @@ Resources:
       - VPCStack
       - S3IAMStack
       - RDSStack
-      - ElastiCacheStack
+      - SQSStack  # Cambiado: Ahora depende de SQS en lugar de ElastiCache
       - EC2SecurityGroup
     Properties:
       TemplateURL: !If
@@ -341,44 +416,48 @@ Resources:
         DBUsername: !Ref DBUsername
         S3BucketName: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
         DeploymentPackageS3Key: !Ref DeploymentPackageS3Key
-        RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+        # RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl  # COMENTADO - No se usa Redis en AWS
+        SQSQueueURL: !GetAtt SQSStack.Outputs.QueueURL  # NUEVO - Usamos SQS en AWS
         InstanceSecurityGroup: !Ref EC2SecurityGroup
       Tags:
         - Key: Name
           Value: !Sub '${EnvironmentName}-alb-asg-stack'
 
-  # 7. Worker Instances
+  # 7. Worker Auto Scaling Group
   WorkersStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
       - VPCStack
       - S3IAMStack
       - RDSStack
-      - ElastiCacheStack
+      - SQSStack
       - ALBAutoScalingStack
       - EC2SecurityGroup
     Properties:
       TemplateURL: !If
         - UseS3Templates
-        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/06-workers.yaml'
-        - './06-workers.yaml'
+        - !Sub 'https://${TemplateS3BucketName}.s3.amazonaws.com/06-workers-autoscaling.yaml'
+        - './06-workers-autoscaling.yaml'
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         KeyPairName: !Ref KeyPairName
         WorkerInstanceType: !Ref WorkerInstanceType
-        NumberOfWorkers: !Ref NumberOfWorkers
+        MinSize: !Ref WorkerMinSize
+        MaxSize: !Ref WorkerMaxSize
+        DesiredCapacity: !Ref WorkerDesiredCapacity
         WorkerConcurrency: !Ref WorkerConcurrency
+        TargetQueueDepth: !Ref TargetQueueDepth
         DBPassword: !Ref DBPassword
         DBHost: !GetAtt RDSStack.Outputs.DBInstanceEndpoint
         DBName: !Ref DBName
         DBUsername: !Ref DBUsername
         S3BucketName: !GetAtt S3IAMStack.Outputs.VideoStorageBucketName
         DeploymentPackageS3Key: !Ref DeploymentPackageS3Key
-        RedisUrl: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+        SQSQueueURL: !GetAtt SQSStack.Outputs.QueueURL
         InstanceSecurityGroup: !Ref EC2SecurityGroup
       Tags:
         - Key: Name
-          Value: !Sub '${EnvironmentName}-workers-stack'
+          Value: !Sub '${EnvironmentName}-workers-asg-stack'
 
 Outputs:
   # VPC Outputs
@@ -400,14 +479,17 @@ Outputs:
     Description: Database connection string (without password)
     Value: !GetAtt RDSStack.Outputs.DBConnectionString
 
-  # ElastiCache Outputs
-  RedisEndpoint:
-    Description: ElastiCache Redis endpoint
-    Value: !GetAtt ElastiCacheStack.Outputs.RedisEndpoint
-
-  RedisUrl:
-    Description: Complete Redis URL (host:port)
-    Value: !GetAtt ElastiCacheStack.Outputs.RedisUrl
+  # ElastiCache Outputs - COMENTADO (No se usa en AWS)
+  # Redis solo se utiliza en desarrollo local con docker-compose
+  # En AWS se usa SQS para la cola de mensajes
+  #
+  # RedisEndpoint:
+  #   Description: ElastiCache Redis endpoint
+  #   Value: !GetAtt ElastiCacheStack.Outputs.RedisEndpoint
+  #
+  # RedisUrl:
+  #   Description: Complete Redis URL (host:port)
+  #   Value: !GetAtt ElastiCacheStack.Outputs.RedisUrl
 
   # Application Outputs
   ApplicationURL:
@@ -419,25 +501,66 @@ Outputs:
     Value: !GetAtt ALBAutoScalingStack.Outputs.LoadBalancerDNS
 
   # Auto Scaling Outputs
-  AutoScalingGroupName:
-    Description: Auto Scaling Group name
+  APIAutoScalingGroupName:
+    Description: API Auto Scaling Group name
     Value: !GetAtt ALBAutoScalingStack.Outputs.AutoScalingGroupName
 
-  # Worker Outputs
-  Worker1InstanceId:
-    Description: Worker 1 instance ID
-    Value: !GetAtt WorkersStack.Outputs.Worker1InstanceId
+  # SQS Outputs
+  SQSQueueURL:
+    Description: SQS Queue URL for video processing
+    Value: !GetAtt SQSStack.Outputs.QueueURL
 
-  Worker1PublicIP:
-    Description: Worker 1 public IP
-    Value: !GetAtt WorkersStack.Outputs.Worker1PublicIP
+  SQSQueueARN:
+    Description: SQS Queue ARN
+    Value: !GetAtt SQSStack.Outputs.QueueARN
+
+  SQSQueueName:
+    Description: SQS Queue Name
+    Value: !GetAtt SQSStack.Outputs.QueueName
+
+  SQSDLQURL:
+    Description: SQS Dead Letter Queue URL
+    Value: !GetAtt SQSStack.Outputs.DLQURL
+
+  # Worker Auto Scaling Outputs
+  WorkerAutoScalingGroupName:
+    Description: Worker Auto Scaling Group name
+    Value: !GetAtt WorkersStack.Outputs.AutoScalingGroupName
+
+  WorkerLaunchTemplateId:
+    Description: Worker Launch Template ID
+    Value: !GetAtt WorkersStack.Outputs.LaunchTemplateId
 
   # Next Steps
   NextSteps:
     Description: Next steps after deployment
     Value: !Sub |
-      1. Upload deployment package: aws s3 cp app.tar.gz s3://${S3IAMStack.Outputs.VideoStorageBucketName}/${DeploymentPackageS3Key}
-      2. Run database migrations: Connect to ${RDSStack.Outputs.DBInstanceEndpoint} and execute SQL files from db/ directory
-      3. Access application: http://${ALBAutoScalingStack.Outputs.LoadBalancerDNS}
-      4. Monitor Auto Scaling: Check CloudWatch dashboard and alarms
-      5. Test video upload: Use Postman collection or frontend at application URL
+      ========================================
+      DEPLOYMENT SUCCESSFUL - Next Steps
+      ========================================
+
+      1. Upload deployment package:
+         aws s3 cp app.tar.gz s3://${S3IAMStack.Outputs.VideoStorageBucketName}/${DeploymentPackageS3Key}
+
+      2. Run database migrations:
+         Connect to: ${RDSStack.Outputs.DBInstanceEndpoint}
+         Execute SQL files from db/ directory
+
+      3. Access application:
+         URL: http://${ALBAutoScalingStack.Outputs.LoadBalancerDNS}
+
+      4. Monitor resources:
+         - API ASG: ${ALBAutoScalingStack.Outputs.AutoScalingGroupName}
+         - Worker ASG: ${WorkersStack.Outputs.AutoScalingGroupName}
+         - SQS Queue: ${SQSStack.Outputs.QueueName}
+         - CloudWatch: Check dashboard and alarms
+
+      5. Test video upload:
+         Use Postman collection or frontend at application URL
+
+      6. Monitor queue and scaling:
+         - SQS Queue URL: ${SQSStack.Outputs.QueueURL}
+         - Workers will auto-scale based on queue depth
+         - Target: ${TargetQueueDepth} messages per worker
+
+      ========================================

@@ -461,6 +461,7 @@ if [ "$TOTAL_INSTANCES" -gt "0" ]; then
         log_success "✓ Instancias healthy: ${HEALTHY_INSTANCES}/${TOTAL_INSTANCES}"
     fi
 fi
+echo ""
 
 # ==========================================
 # EJECUTAR MIGRACIONES DE BASE DE DATOS
@@ -471,7 +472,7 @@ log_info "Database: proyecto_1"
 log_info "User: postgres"
 log_info ""
 log_info "Comando:"
-log_info "  for file in db/*.up.sql; do"
+log_info "  for file in /opt/anb-app/db/*.up.sql; do"
 log_info "    psql -h ${DB_ENDPOINT} -U postgres -d proyecto_1 -f \"\$file\""
 log_info "  done"
 echo ""

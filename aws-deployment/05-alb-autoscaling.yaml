@@ -90,8 +90,13 @@ Parameters:
     Type: String
     Default: deployments/latest/app.tar.gz
 
-  RedisUrl:
-    Description: ElastiCache Redis endpoint (host:port)
+  # RedisUrl - COMENTADO: No se usa Redis en AWS, se usa SQS
+  # RedisUrl:
+  #   Description: ElastiCache Redis endpoint (host:port)
+  #   Type: String
+
+  SQSQueueURL:
+    Description: SQS Queue URL for video processing
     Type: String
 
   InstanceSecurityGroup:
@@ -293,8 +298,10 @@ Resources:
             DB_PASSWORD=${DBPassword}
             DB_SSL_MODE=require
 
-            # Redis Configuration (ElastiCache)
-            REDIS_URL=${RedisUrl}
+            # Queue Configuration - SQS para AWS
+            QUEUE_TYPE=sqs
+            SQS_REGION=${AWS::Region}
+            SQS_QUEUE_URL=${SQSQueueURL}
 
             # JWT Configuration
             JWT_SECRET=${JWTSecret}
