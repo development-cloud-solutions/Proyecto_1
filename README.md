@@ -368,6 +368,9 @@ done
 
 > Para más información sobre el despliegue automatica remitirse al `README.md` de la carpeta `aws-deployment`
 
+# Entrega 4 :: Escalabilidad capa worker
+
+> Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws) con el fin de desplegar los servicios de la presente entrega
 
 # Sustentación
 
@@ -375,3 +378,4 @@ Vídeos de sustentación
 - Entrega 1 => `sustentacion\Entrega_1\README.md`
 - Entrega 2 => `sustentacion\Entrega_2\README.md`
 - Entrega 3 => `sustentacion\Entrega_3\README.md`
+- Entrega 4 => `sustentacion\Entrega_4\README.md`
