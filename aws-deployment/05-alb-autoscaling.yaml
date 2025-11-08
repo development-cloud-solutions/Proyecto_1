@@ -328,6 +328,29 @@ Resources:
             mkdir -p ${!APP_DIR}/back
             cp ${!APP_DIR}/.env ${!APP_DIR}/back/.env
 
+            # Crear .env para frontend con variables VITE
+            mkdir -p ${!APP_DIR}/front
+            cat > ${!APP_DIR}/front/.env << 'FRONTEND_EOF'
+            # ANB Rising Stars Frontend Configuration
+            VITE_API_URL=http://${ApplicationLoadBalancer.DNSName}
+            VITE_VIDEOS_URL=http://${ApplicationLoadBalancer.DNSName}
+            VITE_APP_NAME=ANB Rising Stars Showcase
+            VITE_APP_VERSION=1.0.0
+            VITE_ENVIRONMENT=production
+
+            # API Configuration
+            VITE_MAX_FILE_SIZE=104857600
+            VITE_ALLOWED_FILE_TYPES=video/mp4,video/mov,video/avi
+            VITE_MAX_VIDEO_DURATION=30
+
+            # Features
+            VITE_ENABLE_DEBUG=false
+            VITE_ENABLE_ANALYTICS=false
+
+            # Elastic Load Balancing
+            ELB_DNS_NAME=http://${ApplicationLoadBalancer.DNSName}
+            FRONTEND_EOF
+
             # Construir y levantar servicios
             # Deshabilitar BuildKit para compatibilidad con Amazon Linux 2023
             export DOCKER_BUILDKIT=0
