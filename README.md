@@ -372,6 +372,23 @@ done
 
 > Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws) con el fin de desplegar los servicios de la presente entrega
 
+Dentro de las políticas de Autoscaling se tiene configurado que tiene una instancia como mínimo y se escale hasta 3 instancias como máximo
+
+**API - FRONTEND**
+
+Se escala cuando el CPU promedio del ASG supera el 70%, cuando la carga baja del 70% remueve las instancias, dejando solo 1.
+  - Métrica: CPU Utilization
+  - Umbral objetivo: 70% CPU 
+
+
+**WORKER**
+
+Se escala cuando hay más de 10 mensajes visibles en SQS, y cuando hay menos de 10 mensajes se remueven las instancias, dejando solo 1.
+  - Métrica: ApproximateNumberOfMessagesVisible
+  - Umbral objetivo: 10 mensajes por worker
+  - Warmup: 180 segundos (3 minutos)
+
+
 # Sustentación
 
 Vídeos de sustentación
