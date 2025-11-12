@@ -20,7 +20,7 @@ Parameters:
     Type: CommaDelimitedList
 
   InstanceSecurityGroup:
-    Description: Security Group ID of EC2 instances that need access to Redis
+    Description: Security Group ID of EC2 instances (API and Workers) that need access to Redis
     Type: String
 
   KeyPairName:
@@ -53,6 +53,11 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
           Description: SSH access
+      SecurityGroupEgress:
+        # Permitir todo el tráfico de salida
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName}-redis-sg

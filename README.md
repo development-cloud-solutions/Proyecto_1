@@ -31,6 +31,8 @@ Proyecto_1/
 ├── back/
 │   ├── .dockerignore
 │   ├── .env.example
+│   ├── artillery-autoscaling-api.yml
+│   ├── artillery-autoscaling-worker.yml
 │   ├── artillery-config-simple.yml
 │   ├── artillery-config-video.yml
 │   ├── artillery-config.yml
@@ -78,6 +80,10 @@ Proyecto_1/
 │   │   │   ├── password.go
 │   │   │   ├── video_processing.go
 │   │   ├── workers/
+│   │   │   ├── queue_factory.go
+│   │   │   ├── queue_interface.go
+│   │   │   ├── redis_queue.go
+│   │   │   ├── sqs_queue.go
 │   │   │   ├── task_queue.go
 │   │   │   ├── video_processor.go
 │   ├── Makefile
@@ -163,11 +169,6 @@ Proyecto_1/
 │   │   │   ├── api.js
 │   ├── tailwind.config.js
 │   ├── vite.config.js
-├── load-test-reports/
-│   ├── docker-stats-end-20251009-013832.txt
-│   ├── docker-stats-start-20251009-013832.txt
-│   ├── load-test-summary-20251009-013832.md
-│   ├── simple-test-20251009-013832.log
 ├── README.md
 ├── sustentacion/
 │   ├── Entrega_1/
@@ -175,6 +176,8 @@ Proyecto_1/
 │   ├── Entrega_2/
 │   │   ├── README.md
 │   ├── Entrega_3/
+│   │   ├── README.md
+│   ├── Entrega_4/
 │   │   ├── README.md
 ```
 
@@ -288,6 +291,15 @@ aws ec2 create-key-pair \
 chmod 400 anb-keypair.pem
 ```
 
+> Si al generar la anterior llave se presenta un mensaje como el siguiente: `An error occurred (InvalidKeyPair.Duplicate) when calling the CreateKeyPair operation: The keypair already exists`, se debe eliminar la llave previa o cambiar el nombre de la llave a utilizar.
+```bash 
+# Verificar las llaves existentes
+aws ec2 describe-key-pairs --query "KeyPairs[*].KeyName"
+
+# eliminar llave existente
+aws ec2 delete-key-pair --key-name anb-keypair
+```
+
 - Generar password
 ```bash
 # Generar JWT secret
@@ -359,6 +371,26 @@ done
 
 > Para más información sobre el despliegue automatica remitirse al `README.md` de la carpeta `aws-deployment`
 
+# Entrega 4 :: Escalabilidad capa worker
+
+> Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws) con el fin de desplegar los servicios de la presente entrega
+
+Dentro de las políticas de Autoscaling se tiene configurado que tiene una instancia como mínimo y se escale hasta 3 instancias como máximo
+
+**API - FRONTEND**
+
+Se escala cuando el CPU promedio del ASG supera el 70%, cuando la carga baja del 70% remueve las instancias, dejando solo 1.
+  - Métrica: CPU Utilization
+  - Umbral objetivo: 70% CPU 
+
+
+**WORKER**
+
+Se escala cuando hay más de 10 mensajes visibles en SQS, y cuando hay menos de 10 mensajes se remueven las instancias, dejando solo 1.
+  - Métrica: ApproximateNumberOfMessagesVisible
+  - Umbral objetivo: 10 mensajes por worker
+  - Warmup: 180 segundos (3 minutos)
+
 
 # Sustentación
 
@@ -366,3 +398,4 @@ Vídeos de sustentación
 - Entrega 1 => `sustentacion\Entrega_1\README.md`
 - Entrega 2 => `sustentacion\Entrega_2\README.md`
 - Entrega 3 => `sustentacion\Entrega_3\README.md`
+- Entrega 4 => `sustentacion\Entrega_4\README.md`

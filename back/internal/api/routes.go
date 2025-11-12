@@ -39,7 +39,7 @@ func SetupRoutes(db *sql.DB, cfg *config.Config, taskQueue *workers.TaskQueue, v
 	// Inicializar handlers inyectando dependencias
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	videoHandler := handlers.NewVideoHandler(db, cfg, taskQueue, videoService)
-	rankingHandler := handlers.NewRankingHandler(db, cfg)
+	rankingHandler := handlers.NewRankingHandler(db, cfg, videoService)
 
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

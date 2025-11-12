@@ -30,16 +30,19 @@ services:
       - TZ=America/Bogota
 
       # Database - Amazon RDS PostgreSQL
-      - DB_DRIVER=postgres
+      - DB_DRIVER=${DB_DRIVER:-postgres}
       - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=5432
+      - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-proyecto_1}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_SSL_MODE=${DB_SSL_MODE:-disable}
 
-      # Redis - Compartido con API layer
+      # Queue Configuration - Dual support Redis/SQS 
+      - QUEUE_TYPE=${QUEUE_TYPE:-redis}
       - REDIS_URL=${REDIS_URL:-redis:6379}
+      - SQS_REGION=${SQS_REGION:-us-east-1}
+      - SQS_QUEUE_URL=${SQS_QUEUE_URL:-}
 
       # Worker configuration
       - WORKER_MODE=${WORKER_MODE:-true}
@@ -49,13 +52,13 @@ services:
       # Storage - Amazon S3
       - STORAGE_TYPE=${STORAGE_TYPE:-local}
       - AWS_REGION=${AWS_REGION:-us-east-1}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      - S3_UPLOAD_PREFIX=uploads
-      - S3_PROCESSED_PREFIX=processed
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-anb-videos-bucket}
+      - S3_UPLOAD_PREFIX=${S3_UPLOAD_PREFIX:-uploads}
+      - S3_PROCESSED_PREFIX=${S3_PROCESSED_PREFIX:-processed}
 
       # Legacy paths (no se usan con S3)
-      - UPLOAD_PATH=/app/uploads
-      - PROCESSED_PATH=/app/processed
+      - UPLOAD_PATH=${UPLOAD_PATH:-/app/uploads}
+      - PROCESSED_PATH=${PROCESSED_PATH:-/app/processed}
 
       # Limits
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}

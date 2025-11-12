@@ -32,7 +32,7 @@ cleanup() {
 # Verificar que estamos usando bash
 if [ -z "$BASH_VERSION" ]; then
     echo "Error: Este script requiere bash, no sh"
-    echo "Ejecutar con: bash load-test.sh"
+    echo "Ejecutar con: bash load-test-video.sh"
     exit 1
 fi
 
@@ -58,7 +58,7 @@ REPORTS_DIR="$PROJECT_ROOT/load-test-reports"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 echo
-echo -e "${BLUE}  ANB Rising Stars - Plan de Pruebas de Carga${NC}"
+echo -e "${BLUE}  ANB Rising Stars - Pruebas de Carga de Videos${NC}"
 echo -e "${BLUE}================================================${NC}"
 echo -e " Directorio del proyecto: $PROJECT_ROOT"
 echo -e " Directorio de backend: $BACK_DIR" 
@@ -140,10 +140,10 @@ cd "$BACK_DIR"
 # Verificar archivos necesarios
 echo -e "${YELLOW} Verificando archivos de configuración...${NC}"
 
-CONFIG_FILE="artillery-config.yml"
+CONFIG_FILE="artillery-config-video.yml"
 
 if [ ! -f "${CONFIG_FILE}" ]; then
-    echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado en ${BACK_DIR} ${NC}"
+    echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado${NC}"
     exit 1
 fi
 
@@ -155,8 +155,9 @@ fi
 # Verificar archivo de video para las pruebas de upload
 VIDEO_PATH="../docs/Video/Test_Video.mp4"
 if [ ! -f "$VIDEO_PATH" ]; then
-    echo -e "${YELLOW}  Archivo de video no encontrado: $VIDEO_PATH${NC}"
-    echo -e "${YELLOW}  Las pruebas de upload de video pueden fallar${NC}"
+    echo -e "${RED}  Archivo de video no encontrado: $VIDEO_PATH${NC}"
+    echo -e "${RED}  Las pruebas de upload de video fallarán${NC}"
+    exit 1
 else
     VIDEO_SIZE=$(stat -f%z "$VIDEO_PATH" 2>/dev/null || stat -c%s "$VIDEO_PATH" 2>/dev/null || echo "0")
     echo -e "${GREEN}  Video encontrado - Tamaño: $(($VIDEO_SIZE / 1024 / 1024))MB${NC}"
@@ -179,31 +180,30 @@ find "$REPORTS_DIR" -type f \( \
 echo ""
 
 # Configurar archivos de salida
-RESULTS_JSON="$REPORTS_DIR/load-test-results-$TIMESTAMP.json"
-RESULTS_HTML="$REPORTS_DIR/load-test-report-$TIMESTAMP.html"
+RESULTS_JSON="$REPORTS_DIR/video-test-results-$TIMESTAMP.json"
+RESULTS_HTML="$REPORTS_DIR/video-test-report-$TIMESTAMP.html"
 
-echo -e "${BLUE} Plan de Pruebas de Carga - Fases:${NC}"
-echo -e "    Fase 1: Warmup (2 minutos) - 5 usuarios/s"
-echo -e "    Fase 2: Carga Normal (5 minutos) - 25 usuarios/s"
-echo -e "    Fase 3: Carga Media (5 minutos) - 50 usuarios/s"
-echo -e "    Fase 4: Carga Alta (3 minutos) - 100 usuarios/s"
-echo -e "    Fase 5: Carga Pico (2 minutos) - 200 usuarios/s"
-echo -e "    Fase 6: Recuperación (2 minutos) - 10 usuarios/s"
+echo -e "${BLUE} Plan de Pruebas de Carga de Videos - Fases:${NC}"
+echo -e "    Fase 1: Warmup (2 minutos) - 2 usuarios/s"
+echo -e "    Fase 2: Carga Baja (3 minutos) - 5 usuarios/s"
+echo -e "    Fase 3: Carga Media (3 minutos) - 10 usuarios/s"
+echo -e "    Fase 4: Carga Alta (2 minutos) - 15 usuarios/s"
+echo -e "    Fase 5: Recuperación (2 minutos) - 2 usuarios/s"
 echo ""
 echo -e "${BLUE} Escenarios de Prueba:${NC}"
-echo -e "    Navegación Básica (60%): Health checks, videos públicos, rankings"
-echo -e "    Autenticación (25%): Registro y login con emails únicos"
-echo -e "    Interacción Avanzada (10%): Acciones autenticadas, votación"
-echo -e "    Upload de Videos (5%): Registro, login y upload real de archivos"
+echo -e "    Health Check (30%): Verificación básica del sistema"
+echo -e "    Navegación (20%): Videos públicos y rankings"
+echo -e "    Autenticación (30%): Registro y login"
+echo -e "    Upload de Videos (20%): Principal foco de pruebas"
 echo ""
-echo -e "${BLUE} Métricas Objetivo:${NC}"
-echo -e "    Latencia P95: < 500ms"
-echo -e "    Throughput: > 100 RPS"
-echo -e "    Tasa de errores: < 1%"
+echo -e "${BLUE} Configuración Optimizada:${NC}"
+echo -e "    Timeout HTTP: 120s (extendido para uploads)"
+echo -e "    Pool de conexiones: 15"
+echo -e "    Timeout de upload: 180s"
 echo ""
 
 # Preguntar al usuario si desea continuar
-read -p "¿Desea continuar con las pruebas de carga? (y/N): " -n 1 -r
+read -p "¿Desea continuar con las pruebas de carga de videos? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}  Pruebas canceladas por el usuario${NC}"
@@ -216,7 +216,7 @@ echo -e "${YELLOW} Iniciando monitoreo de recursos...${NC}"
 docker stats --no-stream > "$REPORTS_DIR/docker-stats-start-$TIMESTAMP.txt" 2>/dev/null || echo "Docker stats not available"
 
 # Ejecutar pruebas de carga
-echo -e "${GREEN} Iniciando pruebas de carga...${NC}"
+echo -e "${GREEN} Iniciando pruebas de carga de videos...${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 # Ejecutar Artillery con configuración completa
@@ -226,11 +226,11 @@ artillery run ${CONFIG_FILE} \
         "config": {
             "statsInterval": 10,
             "ensure": {
-                "maxErrorRate": 5,
-                "p99": 2000
+                "maxErrorRate": 10,
+                "p99": 30000
             }
         }
-    }' 2>&1 | tee "$REPORTS_DIR/test-$TIMESTAMP.log"
+    }'
 
 ARTILLERY_EXIT_CODE=$?
 
@@ -260,10 +260,17 @@ try {
 
     console.log('TOTAL_REQUESTS=' + (counters['http.requests'] || counters['http.request_rate'] || 0));
     console.log('SUCCESS_REQUESTS=' + (counters['http.responses'] || counters['http.codes.200'] || 0));
+    console.log('UPLOAD_SUCCESS=' + (counters['http.codes.201'] || 0));
+    console.log('UPLOAD_ERRORS=' + (counters['http.codes.400'] || 0));
+    console.log('TIMEOUTS=' + (counters['errors.ETIMEDOUT'] || 0));
+    console.log('CONNECTION_ERRORS=' + (counters['errors.ECONNREFUSED'] || 0));
     console.log('RPS=' + (rates['http.request_rate'] || 0));
     console.log('P50=' + (responseTime.p50 || responseTime.median || 0));
     console.log('P95=' + (responseTime.p95 || 0));
     console.log('P99=' + (responseTime.p99 || 0));
+    console.log('COMPLETED=' + (counters['vusers.completed'] || 0));
+    console.log('FAILED=' + (counters['vusers.failed'] || 0));
+    console.log('SERVER_ERRORS=' + Object.keys(counters).filter(k => k.startsWith('http.codes.5')).reduce((sum, k) => sum + counters[k], 0));
     console.log('MAX_LATENCY=' + (responseTime.max || 0));
     console.log('MIN_LATENCY=' + (responseTime.min || 0));
     console.log('ERRORS=' + (counters['errors.ECONNREFUSED'] || counters['errors.ETIMEDOUT'] || 0));
@@ -283,10 +290,17 @@ EOF
         echo -e "${BLUE} Métricas Principales:${NC}"
         echo -e "    Total de requests: $TOTAL_REQUESTS"
         echo -e "    Requests exitosos: $SUCCESS_REQUESTS"
+        echo -e "    Uploads exitosos (201): $UPLOAD_SUCCESS"
+        echo -e "    Errores de upload (400): $UPLOAD_ERRORS"
+        echo -e "    Errores de servidor (5xx): $SERVER_ERRORS"
+        echo -e "    Timeouts: $TIMEOUTS"
+        echo -e "    Errores de conexión: $CONNECTION_ERRORS"
         echo -e "    RPS promedio: $RPS"
         echo -e "    Latencia P50: ${P50}ms"
         echo -e "    Latencia P95: ${P95}ms"
         echo -e "    Latencia P99: ${P99}ms"
+        echo -e "    Usuarios completados: $COMPLETED"
+        echo -e "    Usuarios fallidos: $FAILED"
         echo -e "    Errores de conexión: $ERRORS"
         echo -e "    Códigos 4xx: $STATUS_CODES_4XX"
         echo -e "    Códigos 5xx: $STATUS_CODES_5XX"
@@ -298,11 +312,11 @@ EOF
         P95_INT=${P95%.*}  # Remover decimales
         RPS_INT=${RPS%.*}  # Remover decimales
 
-        if [ "$P95_INT" -lt 500 ] 2>/dev/null; then
-            echo -e "    Latencia P95 < 500ms: ${GREEN}PASÓ${NC} (${P95}ms)"
-        else
-            echo -e "    Latencia P95 < 500ms: ${RED}FALLÓ${NC} (${P95}ms)"
-        fi
+        #if [ "$P95_INT" -lt 500 ] 2>/dev/null; then
+        #    echo -e "    Latencia P95 < 500ms: ${GREEN}PASÓ${NC} (${P95}ms)"
+        #else
+        #    echo -e "    Latencia P95 < 500ms: ${RED}FALLÓ${NC} (${P95}ms)"
+        #fi
 
         if [ "$RPS_INT" -gt 100 ] 2>/dev/null; then
             echo -e "    Throughput > 100 RPS: ${GREEN}PASÓ${NC} (${RPS} RPS)"
@@ -320,6 +334,42 @@ EOF
             else
                 echo -e "    Tasa de éxito > 99%: ${RED}FALLÓ${NC} (${SUCCESS_RATE}%)"
             fi
+        fi
+
+        # Calcular tasa de éxito
+        if [ "$TOTAL_REQUESTS" -gt 0 ] 2>/dev/null; then
+            SUCCESS_RATE=$(node -e "console.log(Math.round($SUCCESS_REQUESTS * 100 / $TOTAL_REQUESTS))")
+            echo -e "    Tasa de éxito: ${SUCCESS_RATE}%"
+        fi
+
+        # Evaluación específica para videos
+        echo -e "\n${BLUE} Evaluación de Video Upload:${NC}"
+
+        if [ "$TIMEOUTS" -lt 20 ] 2>/dev/null; then  # Más realista para videos
+            echo -e "    Timeouts < 20: ${GREEN}PASÓ${NC} ($TIMEOUTS)"
+        else
+            echo -e "    Timeouts < 20: ${RED}FALLÓ${NC} ($TIMEOUTS)"
+        fi
+
+        if [ "$UPLOAD_ERRORS" -lt 10 ] 2>/dev/null; then  # Más estricto
+            echo -e "    Errores de upload < 10: ${GREEN}PASÓ${NC} ($UPLOAD_ERRORS)"
+        else
+            echo -e "    Errores de upload < 10: ${RED}FALLÓ${NC} ($UPLOAD_ERRORS)"
+        fi
+
+        # Verificar que al menos algunos uploads sean exitosos
+        if [ "$UPLOAD_SUCCESS" -gt 0 ] 2>/dev/null; then
+            echo -e "    Uploads exitosos > 0: ${GREEN}PASÓ${NC} ($UPLOAD_SUCCESS)"
+        else
+            echo -e "    Uploads exitosos > 0: ${RED}FALLÓ${NC} ($UPLOAD_SUCCESS)"
+        fi
+
+        # Verificar latencia P95 para uploads (más permisiva)
+        P95_SECONDS=$(node -e "console.log(Math.round($P95 / 1000))")
+        if [ "$P95_SECONDS" -lt 60 ] 2>/dev/null; then  # < 1 minuto
+            echo -e "    Latencia P95 < 60s: ${GREEN}PASÓ${NC} (${P95_SECONDS}s)"
+        else
+            echo -e "    Latencia P95 < 60s: ${RED}FALLÓ${NC} (${P95_SECONDS}s)"
         fi
 
     else
@@ -361,9 +411,19 @@ cat > "$SUMMARY_FILE" << EOF
 ## Configuración de Prueba
 
 - **Target**: ${API_TARGET_URL}
-- **Fases**: 6 (Warmup → Normal → Media → Alta → Pico → Recuperación)
-- **Usuarios máximos**: 200 usuarios/segundo
-- **Escenarios**: Navegación básica (60%), Autenticación (25%), Interacción avanzada (10%), Upload videos (5%)
+- **Fases**: 5 (Warmup → Baja → Media → Alta → Recuperación)
+- **Usuarios máximos**: 15 usuarios/segundo
+- **Distribución**: Health(30%), Navegación(20%), Auth(30%), Video Upload(20%)
+- **Timeouts**: HTTP 120s, Upload 180s
+- **Archivo de video**: Test_Video.mp4 (~57MB)
+
+## Métricas Clave
+
+- **Total requests**: $(jq '.aggregate.counters."http.requests" // 0' "$RESULTS_JSON" 2>/dev/null || echo "N/A")
+- **Uploads exitosos**: $(jq '.aggregate.counters."http.codes.201" // 0' "$RESULTS_JSON" 2>/dev/null || echo "N/A")
+- **Errores de upload**: $(jq '.aggregate.counters."http.codes.400" // 0' "$RESULTS_JSON" 2>/dev/null || echo "N/A")
+- **Timeouts**: $(jq '.aggregate.counters."errors.ETIMEDOUT" // 0' "$RESULTS_JSON" 2>/dev/null || echo "N/A")
+- **Latencia P95**: $(jq '.aggregate.summaries."http.response_time".p95 // 0' "$RESULTS_JSON" 2>/dev/null || echo "N/A")ms
 
 ## Archivos Generados
 
@@ -373,18 +433,18 @@ cat > "$SUMMARY_FILE" << EOF
 
 ## Próximos Pasos
 
-1. Revisar el reporte HTML detallado
-2. Analizar métricas de latencia y throughput
-3. Identificar cuellos de botella en la aplicación
-4. Implementar optimizaciones recomendadas
-5. Repetir pruebas después de optimizaciones
+1. Revisar reporte HTML detallado
+2. Analizar timeouts y errores específicos
+3. Optimizar configuración de upload si es necesario
+4. Considerar CDN para archivos grandes
+5. Implementar upload chunked para mejorar confiabilidad
 
-## Criterios de Evaluación
+## Criterios de Evaluación para Videos
 
--   **Latencia P95 < 500ms**
--   **Throughput > 100 RPS**
--   **Tasa de errores < 1%**
--   **Tiempo de respuesta estable**
+- **Timeouts < 100** (aceptable para uploads grandes)
+- **Errores de upload < 50** (tasa de error ~5%)
+- **Latencia P95 < 30s** (uploads de video)
+- **Usuarios completados > fallidos**
 
 EOF
 

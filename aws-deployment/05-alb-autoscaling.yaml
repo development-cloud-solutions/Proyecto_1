@@ -90,8 +90,13 @@ Parameters:
     Type: String
     Default: deployments/latest/app.tar.gz
 
-  RedisUrl:
-    Description: ElastiCache Redis endpoint (host:port)
+  # RedisUrl - COMENTADO: No se usa Redis en AWS, se usa SQS
+  # RedisUrl:
+  #   Description: ElastiCache Redis endpoint (host:port)
+  #   Type: String
+
+  SQSQueueURL:
+    Description: SQS Queue URL for video processing
     Type: String
 
   InstanceSecurityGroup:
@@ -293,8 +298,10 @@ Resources:
             DB_PASSWORD=${DBPassword}
             DB_SSL_MODE=require
 
-            # Redis Configuration (ElastiCache)
-            REDIS_URL=${RedisUrl}
+            # Queue Configuration - SQS para AWS
+            QUEUE_TYPE=sqs
+            SQS_REGION=${AWS::Region}
+            SQS_QUEUE_URL=${SQSQueueURL}
 
             # JWT Configuration
             JWT_SECRET=${JWTSecret}
@@ -320,6 +327,29 @@ Resources:
             # Copiar .env a back/
             mkdir -p ${!APP_DIR}/back
             cp ${!APP_DIR}/.env ${!APP_DIR}/back/.env
+
+            # Crear .env para frontend con variables VITE
+            mkdir -p ${!APP_DIR}/front
+            cat > ${!APP_DIR}/front/.env << 'FRONTEND_EOF'
+            # ANB Rising Stars Frontend Configuration
+            VITE_API_URL=http://${ApplicationLoadBalancer.DNSName}
+            VITE_VIDEOS_URL=http://${ApplicationLoadBalancer.DNSName}
+            VITE_APP_NAME=ANB Rising Stars Showcase
+            VITE_APP_VERSION=1.0.0
+            VITE_ENVIRONMENT=production
+
+            # API Configuration
+            VITE_MAX_FILE_SIZE=104857600
+            VITE_ALLOWED_FILE_TYPES=video/mp4,video/mov,video/avi
+            VITE_MAX_VIDEO_DURATION=30
+
+            # Features
+            VITE_ENABLE_DEBUG=false
+            VITE_ENABLE_ANALYTICS=false
+
+            # Elastic Load Balancing
+            ELB_DNS_NAME=http://${ApplicationLoadBalancer.DNSName}
+            FRONTEND_EOF
 
             # Construir y levantar servicios
             # Deshabilitar BuildKit para compatibilidad con Amazon Linux 2023

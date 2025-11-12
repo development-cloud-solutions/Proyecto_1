@@ -21,8 +21,11 @@ type Config struct {
 	DBPassword string
 	DBSSLMode  string
 
-	// Redis
-	RedisURL string
+	// Queue Configuration
+	QueueType string // "redis" or "sqs"
+	RedisURL  string
+	SQSRegion string
+	SQSQueue  string // SQS Queue URL
 
 	// JWT
 	JWTSecret     string
@@ -62,7 +65,10 @@ func Load() *Config {
 		DBPassword: getEnv("DB_PASSWORD", "password"),
 		DBSSLMode:  getEnv("DB_SSL_MODE", "disable"),
 
-		RedisURL: getEnv("REDIS_URL", "redis:6379"),
+		QueueType: getEnv("QUEUE_TYPE", "redis"), // "redis" or "sqs"
+		RedisURL:  getEnv("REDIS_URL", "redis:6379"),
+		SQSRegion: getEnv("SQS_REGION", "us-east-1"),
+		SQSQueue:  getEnv("SQS_QUEUE_URL", ""),
 
 		JWTSecret:     getEnv("JWT_SECRET", "local-development-secret-key"),
 		JWTExpiration: getDurationEnv("JWT_EXPIRATION", "24h"),

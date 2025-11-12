@@ -1,35 +1,35 @@
 package workers
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"back/internal/config"
-	"back/internal/services"
-
-	"github.com/hibiken/asynq"
 )
 
 const (
 	TypeVideoProcessing = "video:processing"
 )
 
-// TaskQueue wraps el cliente asynq y provee helpers para encolar tareas
+// TaskQueue wraps el cliente de cola y provee helpers para encolar tareas
+// Compatible con Redis (Asynq) y SQS
 type TaskQueue struct {
-	client *asynq.Client
+	client QueueClient
 	cfg    *config.Config
 }
 
-func NewTaskQueue(cfg *config.Config) *TaskQueue {
-	redisOpt := asynq.RedisClientOpt{
-		Addr: cfg.RedisURL, // Corregido: usa RedisURL
+// NewTaskQueue crea una nueva instancia de TaskQueue usando la configuración
+func NewTaskQueue(cfg *config.Config) (*TaskQueue, error) {
+	client, err := NewQueueClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create queue client: %w", err)
 	}
-	client := asynq.NewClient(redisOpt)
+
 	return &TaskQueue{
 		client: client,
 		cfg:    cfg,
-	}
+	}, nil
 }
 
 // EnqueueVideoProcessing encola una tarea para procesar un video
@@ -38,33 +38,25 @@ func (q *TaskQueue) EnqueueVideoProcessing(videoID string) error {
 	if err != nil {
 		return err
 	}
-	task := asynq.NewTask(TypeVideoProcessing, payload)
-	_, err = q.client.Enqueue(task)
-	if err != nil {
+
+	if err := q.client.Enqueue(context.Background(), TypeVideoProcessing, payload); err != nil {
 		return fmt.Errorf("enqueue failed: %w", err)
 	}
+
 	return nil
 }
 
-// NewServer crea un server asynq y registra handlers (retorna el server para Start)
-func NewServer(cfg *config.Config, videoService services.VideoServiceInterface, db *sql.DB) *asynq.Server {
-	redisOpt := asynq.RedisClientOpt{
-		Addr: cfg.RedisURL, // Corregido: usa RedisURL
-	}
+// GetQueueDepth retorna la cantidad de mensajes pendientes en la cola
+func (q *TaskQueue) GetQueueDepth() (int64, error) {
+	return q.client.GetQueueDepth(context.Background())
+}
 
-	mux := asynq.NewServeMux()
+// Close cierra la conexión con la cola
+func (q *TaskQueue) Close() error {
+	return q.client.Close()
+}
 
-	processor := &VideoProcessor{
-		config:       cfg,
-		videoService: videoService,
-		db:           db,
-	}
-
-	mux.HandleFunc(TypeVideoProcessing, processor.HandleVideoProcessing)
-
-	srv := asynq.NewServer(redisOpt, asynq.Config{
-		Concurrency: cfg.WorkerConcurrency, // Corregido: usa WorkerConcurrency
-	})
-
-	return srv
+// GetClient retorna el cliente subyacente (para casos especiales)
+func (q *TaskQueue) GetClient() QueueClient {
+	return q.client
 }

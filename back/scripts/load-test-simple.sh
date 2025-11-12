@@ -32,7 +32,7 @@ cleanup() {
 # Verificar que estamos usando bash
 if [ -z "$BASH_VERSION" ]; then
     echo "Error: Este script requiere bash, no sh"
-    echo "Ejecutar con: bash load-test.sh"
+    echo "Ejecutar con: bash load-test-simple.sh"
     exit 1
 fi
 
@@ -58,8 +58,8 @@ REPORTS_DIR="$PROJECT_ROOT/load-test-reports"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 echo
-echo -e "${BLUE}  ANB Rising Stars - Plan de Pruebas de Carga${NC}"
-echo -e "${BLUE}================================================${NC}"
+echo -e "${BLUE}  ANB Rising Stars - Prueba SIMPLE de Registro (Solo 1 minuto)${NC}"
+echo -e "${BLUE}================================================================${NC}"
 echo -e " Directorio del proyecto: $PROJECT_ROOT"
 echo -e " Directorio de backend: $BACK_DIR" 
 echo -e " Directorio de reportes: $REPORTS_DIR"
@@ -140,7 +140,7 @@ cd "$BACK_DIR"
 # Verificar archivos necesarios
 echo -e "${YELLOW} Verificando archivos de configuración...${NC}"
 
-CONFIG_FILE="artillery-config.yml"
+CONFIG_FILE="artillery-config-simple.yml"
 
 if [ ! -f "${CONFIG_FILE}" ]; then
     echo -e "${RED}  Archivo ${CONFIG_FILE} no encontrado en ${BACK_DIR} ${NC}"
@@ -220,17 +220,19 @@ echo -e "${GREEN} Iniciando pruebas de carga...${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 # Ejecutar Artillery con configuración completa
-artillery run ${CONFIG_FILE} \
+artillery run "$CONFIG_FILE" \
     --output "$RESULTS_JSON" \
     --overrides '{
         "config": {
-            "statsInterval": 10,
-            "ensure": {
-                "maxErrorRate": 5,
-                "p99": 2000
-            }
+            "phases": [
+                {
+                    "duration": 60,
+                    "arrivalRate": 5,
+                    "name": "Simple Test - Solo Registro"
+                }
+            ]
         }
-    }' 2>&1 | tee "$REPORTS_DIR/test-$TIMESTAMP.log"
+    }' 2>&1 | tee "$REPORTS_DIR/simple-test-$TIMESTAMP.log"
 
 ARTILLERY_EXIT_CODE=$?
 
@@ -355,15 +357,15 @@ SUMMARY_FILE="$REPORTS_DIR/load-test-summary-$TIMESTAMP.md"
 cat > "$SUMMARY_FILE" << EOF
 # Resumen de Pruebas de Carga - ANB Rising Stars
 
-**Fecha de ejecución**: $(date)  
-**Duración total**: 19 minutos (6 fases)  
+**Fecha de ejecución**: $(date)
+**Duración total**: Prueba Simple - Solo Registro (1 minuto)
 
 ## Configuración de Prueba
 
 - **Target**: ${API_TARGET_URL}
-- **Fases**: 6 (Warmup → Normal → Media → Alta → Pico → Recuperación)
-- **Usuarios máximos**: 200 usuarios/segundo
-- **Escenarios**: Navegación básica (60%), Autenticación (25%), Interacción avanzada (10%), Upload videos (5%)
+- **Fase**: Simple Test (1 minuto) - 5 usuarios/segundo
+- **Escenarios**: Registro de usuarios únicos
+- **Tipo**: Prueba de registro simple
 
 ## Archivos Generados
 

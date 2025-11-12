@@ -51,16 +51,16 @@ echo "  - Stack de CloudFormation: ${STACK_NAME}"
 echo "  - Todos los recursos AWS asociados:"
 echo "    * VPC y subnets"
 echo "    * EC2 instances (API y Workers)"
-echo "    * Auto Scaling Group"
+echo "    * Auto Scaling Groups (API y Workers)"
 echo "    * Application Load Balancer"
-echo "    * Redis EC2 instance (con Docker container)"
+echo "    * SQS Queue y Dead Letter Queue"
 echo "    * RDS Database (con snapshot final)"
-echo "    * S3 Bucket (necesita estar vacío)"
-echo "    * IAM Roles y Policies"
+echo "    * S3 Bucket (será VACIADO y ELIMINADO completamente)"
 echo "    * Security Groups"
 echo "    * CloudWatch Logs y Alarms"
 echo ""
 log_warning "Esta acción NO SE PUEDE DESHACER"
+log_warning "TODOS LOS VIDEOS Y ARCHIVOS EN S3 SE PERDERÁN"
 echo ""
 read -p "¿Estás seguro de que quieres continuar? (escribe 'yes' para confirmar): " confirmation
 
@@ -91,17 +91,21 @@ log_info "S3 Bucket encontrado: ${S3_BUCKET}"
 # VACIAR S3 BUCKET
 # ==========================================
 if [ -n "$S3_BUCKET" ]; then
-    log_warning "Vaciando S3 bucket: ${S3_BUCKET}"
+    log_warning "Vaciando y eliminando S3 bucket: ${S3_BUCKET}"
+    echo ""
 
-    # Preguntar si quiere hacer backup
+    # Preguntar si quiere hacer backup antes de eliminar
     read -p "¿Quieres hacer un backup del bucket S3 antes de eliminarlo? (y/n): " backup_choice
 
     if [ "$backup_choice" = "y" ] || [ "$backup_choice" = "Y" ]; then
         BACKUP_DIR="s3-backup-$(date +%Y%m%d-%H%M%S)"
         log_info "Descargando backup a: ${BACKUP_DIR}"
         mkdir -p "${BACKUP_DIR}"
-        aws s3 sync "s3://${S3_BUCKET}" "${BACKUP_DIR}/"
+        aws s3 sync "s3://${S3_BUCKET}" "${BACKUP_DIR}/" || {
+            log_warning "Algunos archivos no se pudieron descargar, continuando..."
+        }
         log_success "Backup completado en: ${BACKUP_DIR}"
+        echo ""
     fi
 
     # Eliminar todas las versiones de objetos
@@ -110,21 +114,47 @@ if [ -n "$S3_BUCKET" ]; then
     # Verificar si jq está disponible
     if command -v jq &> /dev/null; then
         # Método con jq (más eficiente)
-        aws s3api list-object-versions \
+        log_info "Obteniendo lista de versiones..."
+        VERSIONS_OUTPUT=$(aws s3api list-object-versions \
             --bucket "${S3_BUCKET}" \
-            --query 'Versions[].{Key:Key,VersionId:VersionId}' \
-            --output json 2>/dev/null | \
-        jq -r '.[] | "--key \"\(.Key)\" --version-id \"\(.VersionId)\""' | \
-        xargs -I {} aws s3api delete-object --bucket "${S3_BUCKET}" {} 2>/dev/null || true
+            --output json 2>/dev/null || echo '{}')
+        
+        # Contar versiones y delete markers
+        VERSION_COUNT=$(echo "$VERSIONS_OUTPUT" | jq -r '(.Versions // []) | length')
+        MARKER_COUNT=$(echo "$VERSIONS_OUTPUT" | jq -r '(.DeleteMarkers // []) | length')
+        
+        log_info "Versiones encontradas: ${VERSION_COUNT}"
+        log_info "Delete markers encontrados: ${MARKER_COUNT}"
+        
+        # Eliminar versiones solo si existen
+        if [ "$VERSION_COUNT" -gt 0 ]; then
+            log_info "Eliminando versiones de objetos..."
+            echo "$VERSIONS_OUTPUT" | \
+            jq -r '(.Versions // []) | .[] | "--key \"\(.Key)\" --version-id \"\(.VersionId)\""' | \
+            while read -r args; do
+                if [ -n "$args" ]; then
+                    aws s3api delete-object --bucket "${S3_BUCKET}" $args 2>/dev/null || true
+                fi
+            done
+            log_success "Versiones eliminadas"
+        fi
 
-        # Eliminar delete markers
-        log_info "Eliminando delete markers..."
-        aws s3api list-object-versions \
-            --bucket "${S3_BUCKET}" \
-            --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
-            --output json 2>/dev/null | \
-        jq -r '.[] | "--key \"\(.Key)\" --version-id \"\(.VersionId)\""' | \
-        xargs -I {} aws s3api delete-object --bucket "${S3_BUCKET}" {} 2>/dev/null || true
+        # Eliminar delete markers solo si existen
+        if [ "$MARKER_COUNT" -gt 0 ]; then
+            log_info "Eliminando delete markers..."
+            echo "$VERSIONS_OUTPUT" | \
+            jq -r '(.DeleteMarkers // []) | .[] | "--key \"\(.Key)\" --version-id \"\(.VersionId)\""' | \
+            while read -r args; do
+                if [ -n "$args" ]; then
+                    aws s3api delete-object --bucket "${S3_BUCKET}" $args 2>/dev/null || true
+                fi
+            done
+            log_success "Delete markers eliminados"
+        fi
+        
+        if [ "$VERSION_COUNT" -eq 0 ] && [ "$MARKER_COUNT" -eq 0 ]; then
+            log_info "No hay versiones ni delete markers para eliminar"
+        fi
     else
         # Método alternativo sin jq (usando Python)
         log_warning "jq no está instalado, usando método alternativo..."
@@ -140,7 +170,11 @@ try:
     for version in data.get('Versions', []):
         print(f\"--key '{version['Key']}' --version-id '{version['VersionId']}'\")
 except: pass
-" | xargs -I {} aws s3api delete-object --bucket "${S3_BUCKET}" {} 2>/dev/null || true
+" | while read -r args; do
+    if [ -n "$args" ]; then
+        aws s3api delete-object --bucket "${S3_BUCKET}" $args 2>/dev/null || true
+    fi
+done
 
         # Eliminar delete markers
         aws s3api list-object-versions \
@@ -153,7 +187,11 @@ try:
     for marker in data.get('DeleteMarkers', []):
         print(f\"--key '{marker['Key']}' --version-id '{marker['VersionId']}'\")
 except: pass
-" | xargs -I {} aws s3api delete-object --bucket "${S3_BUCKET}" {} 2>/dev/null || true
+" | while read -r args; do
+    if [ -n "$args" ]; then
+        aws s3api delete-object --bucket "${S3_BUCKET}" $args 2>/dev/null || true
+    fi
+done
     fi
 
     # Eliminar objetos actuales
@@ -161,6 +199,17 @@ except: pass
     aws s3 rm "s3://${S3_BUCKET}" --recursive 2>/dev/null || true
 
     log_success "S3 bucket vaciado"
+
+    # Eliminar el bucket
+    log_info "Eliminando el bucket S3: ${S3_BUCKET}"
+    if aws s3 rb "s3://${S3_BUCKET}" --force 2>/dev/null; then
+        log_success "Bucket S3 eliminado: ${S3_BUCKET}"
+    else
+        log_warning "No se pudo eliminar el bucket automáticamente"
+        log_warning "Intenta eliminarlo manualmente: aws s3 rb s3://${S3_BUCKET} --force"
+    fi
+else
+    log_warning "No se encontró bucket S3 para eliminar"
 fi
 
 # ==========================================
@@ -251,16 +300,19 @@ echo "=========================================="
 echo ""
 log_info "Recursos eliminados:"
 echo "  ✓ CloudFormation Stack: ${STACK_NAME}"
-[ -n "$S3_BUCKET" ] && echo "  ✓ S3 Bucket: ${S3_BUCKET}"
+[ -n "$S3_BUCKET" ] && echo "  ✓ S3 Bucket (vaciado y eliminado): ${S3_BUCKET}"
+echo "  ✓ SQS Queue y Dead Letter Queue"
 echo "  ✓ VPC y componentes de red"
-echo "  ✓ EC2 instances"
-echo "  ✓ Auto Scaling Group"
-echo "  ✓ Load Balancer"
-echo "  ✓ RDS Database (con snapshot)"
-echo "  ✓ IAM Roles"
+echo "  ✓ EC2 instances (API y Workers)"
+echo "  ✓ Auto Scaling Groups (API y Workers)"
+echo "  ✓ Application Load Balancer"
+echo "  ✓ RDS Database (con snapshot final)"
+echo "  ✓ CloudWatch Logs y Alarms"
+echo "  ✓ Security Groups"
 echo ""
 log_info "Para verificar que no quedan recursos:"
 echo "  aws cloudformation list-stacks --stack-status-filter DELETE_COMPLETE | grep ${STACK_NAME}"
+echo "  aws s3 ls | grep ${S3_BUCKET}"
 echo ""
 log_warning "IMPORTANTE: Verifica tu cuenta AWS para asegurarte de que no quedan recursos cobrando"
 echo ""

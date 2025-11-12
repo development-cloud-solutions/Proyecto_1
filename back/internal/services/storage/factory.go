@@ -36,6 +36,6 @@ func NewStorage(cfg *config.Config) (Storage, error) {
 	}
 
 	// Default: local storage
-	log.Printf("Initializing local storage: uploadPath=%s", cfg.UploadPath)
-	return NewLocalStorage(cfg.UploadPath), nil
+	log.Printf("Initializing local storage: uploadPath=%s, processedPath=%s", cfg.UploadPath, cfg.ProcessedPath)
+	return NewLocalStorage(cfg.UploadPath, cfg.ProcessedPath), nil
 }

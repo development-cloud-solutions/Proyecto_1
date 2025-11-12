@@ -22,6 +22,7 @@ type VideoServiceInterface interface {
 	MarkProcessed(videoID, processedPath string) error
 	MarkFailed(videoID, reason string) error
 	DeleteVideo(videoID string, userID int64) error
+	GeneratePublicURL(processedPath *string) *string
 }
 
 type VideoService struct {
@@ -32,6 +33,22 @@ type VideoService struct {
 
 func NewVideoService(db *sql.DB, cfg *config.Config, st storage.Storage) *VideoService {
 	return &VideoService{db: db, cfg: cfg, storage: st}
+}
+
+// GeneratePublicURL convierte la ruta de BD a URL pública accesible
+func (s *VideoService) GeneratePublicURL(processedPath *string) *string {
+	if processedPath == nil || *processedPath == "" {
+		return nil
+	}
+
+	// Generar URL pública usando el storage
+	publicURL, err := s.storage.GetPublicURL(*processedPath)
+	if err != nil {
+		// Si falla, retornar la ruta original
+		return processedPath
+	}
+
+	return &publicURL
 }
 
 // CreateVideo guarda metadata y guarda archivo en storage local
