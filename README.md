@@ -18,12 +18,13 @@ Proyecto_1/
 │   ├── 01-vpc-networking.yaml
 │   ├── 02-s3-iam.yaml
 │   ├── 03-elasticache.yaml
-│   ├── 03.5-sqs-queue.yaml
+│   ├── 03-elasticache.yaml.backup
 │   ├── 04-rds-database.yaml
 │   ├── 05-alb-autoscaling.yaml
-│   ├── 06-workers-autoscaling.yaml
 │   ├── 06-workers.yaml
+│   ├── anb-keypair.pem
 │   ├── cleanup.sh
+│   ├── deploy copy.sh
 │   ├── deploy.sh
 │   ├── parameters.example.json
 │   ├── README.md
@@ -89,18 +90,6 @@ Proyecto_1/
 │   ├── nginx/
 │   │   ├── nginx.conf
 │   ├── README.md
-│   ├── scripts/
-│   │   ├── generate-report.js
-│   │   ├── load-test-autoscaling-api.sh
-│   │   ├── load-test-autoscaling-worker.sh
-│   │   ├── load-test-data.csv
-│   │   ├── load-test-simple.sh
-│   │   ├── load-test-video.sh
-│   │   ├── load-test.sh
-│   │   ├── newman-tests.sh
-│   │   ├── processor.js
-│   │   ├── README.md
-│   │   ├── view-results.sh
 ├── capacity-planning/
 │   ├── Apache_Bench/
 │   │   ├── ab_tests.sh
@@ -154,9 +143,7 @@ Proyecto_1/
 │   ├── Entrega_3/
 │   │   ├── 001_ISIS4426_Entrega_3_Req.pdf
 │   │   ├── 002_Proyecto_Entrega_3.pdf
-│   ├── Entrega_4/
-│   │   ├── 001_ISIS4426_Entrega_4_Req.pdf
-│   │   ├── 002_Proyecto_Entrega_4.pdf
+│   │   ├── README.md
 │   ├── Video/
 │   │   ├── README.md
 │   │   ├── Test_Video.mp4
