@@ -74,7 +74,7 @@ module.exports = {
         ...form.getHeaders(),
         Authorization: `Bearer ${context.vars.upload_token}`
       },
-      timeout: 180000 // 3 minutos
+      timeout: 300000 // 5 minutos (match Artillery config timeout)
     };
 
     const req = http.request(requestOptions, (res) => {

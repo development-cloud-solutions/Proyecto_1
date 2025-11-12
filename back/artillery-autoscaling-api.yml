@@ -1,0 +1,179 @@
+# Artillery Load Test - API Autoscaling Test
+# Objetivo: Generar suficiente carga para que el CPU del API supere 70% y active autoscaling
+# Métrica objetivo: CPU > 70% para escalar de 1 → 3 instancias
+
+config:
+  target: '{{ $processEnvironment.API_TARGET_URL }}'
+  http:
+    timeout: 30
+    pool: 100
+    maxSockets: 100
+    keepAlive: true
+  phases:
+    # Fase 1: Warmup ligero (2 minutos) - Dejar que el sistema se estabilice
+    - duration: 120
+      arrivalRate: 10
+      name: "Warmup - Baseline"
+
+    # Fase 2: Incremento gradual (3 minutos) - Comenzar a subir CPU
+    - duration: 180
+      arrivalRate: 30
+      rampTo: 80
+      name: "Ramp Up - Increase CPU"
+
+    # Fase 3: Carga sostenida alta (8 minutos) - FORZAR AUTOSCALING
+    # Esta fase debe mantener el CPU > 70% por suficiente tiempo para que AWS escale
+    - duration: 480
+      arrivalRate: 150
+      name: "Sustained High Load - TRIGGER AUTOSCALING"
+
+    # Fase 4: Carga pico (5 minutos) - Mantener presión con múltiples instancias
+    - duration: 300
+      arrivalRate: 250
+      name: "Peak Load - Test Multiple Instances"
+
+    # Fase 5: Reducción gradual (3 minutos) - Permitir scale-in
+    - duration: 180
+      arrivalRate: 250
+      rampTo: 20
+      name: "Ramp Down - Allow Scale In"
+
+    # Fase 6: Recuperación (10 minutos) - Verificar estabilidad y downscaling
+    - duration: 600
+      arrivalRate: 5
+      name: "Recovery - Monitor Scale In (Extended)"
+
+  payload:
+    path: './scripts/load-test-data.csv'
+    fields:
+      - 'email'
+      - 'first_name'
+      - 'last_name'
+      - 'city'
+
+  variables:
+    test_password: "StrongPass123"
+
+  processor: "scripts/processor.js"
+
+scenarios:
+  # Escenario optimizado para consumir CPU del API
+  # Enfoque: Operaciones computacionalmente costosas (queries, autenticación, validaciones)
+
+  # 30% - Health checks rápidos (baseline)
+  - name: "Quick Health Check"
+    weight: 30
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+
+  # 25% - Consultas de videos públicos con queries complejas
+  - name: "Heavy Video Queries"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/public/videos"
+          qs:
+            limit: 50
+            sort: "votes"
+          expect:
+            - statusCode: 200
+      - think: 0.5
+      - get:
+          url: "/api/public/rankings"
+          qs:
+            limit: 100
+            city: "{{ city }}"
+          expect:
+            - statusCode: 200
+      - think: 0.5
+      - get:
+          url: "/api/public/videos"
+          expect:
+            - statusCode: 200
+
+  # 30% - Registro y autenticación (operaciones costosas de CPU: hashing, JWT)
+  - name: "Auth Heavy Operations"
+    weight: 30
+    flow:
+      - function: "generateUniqueEmail"
+      - post:
+          url: "/api/auth/signup"
+          json:
+            first_name: "Load{{ $randomNumber(1000, 9999) }}"
+            last_name: "Test"
+            email: "{{ uniqueEmail }}"
+            password1: "{{ test_password }}"
+            password2: "{{ test_password }}"
+            city: "{{ city }}"
+            country: "Colombia"
+          expect:
+            - statusCode: 201
+      - think: 0.3
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ uniqueEmail }}"
+            password: "{{ test_password }}"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.access_token"
+              as: "token"
+
+  # 15% - Operaciones autenticadas múltiples (queries + validación de JWT)
+  - name: "Authenticated Heavy Queries"
+    weight: 15
+    flow:
+      - function: "generateUniqueEmail"
+      - post:
+          url: "/api/auth/signup"
+          json:
+            first_name: "Auth{{ $randomNumber(1000, 9999) }}"
+            last_name: "Test"
+            email: "{{ uniqueEmail }}"
+            password1: "{{ test_password }}"
+            password2: "{{ test_password }}"
+            city: "{{ city }}"
+            country: "Colombia"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ uniqueEmail }}"
+            password: "{{ test_password }}"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.access_token"
+              as: "auth_token"
+      # Múltiples requests autenticados (validación JWT consume CPU)
+      - get:
+          url: "/api/videos"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+      - think: 0.3
+      - get:
+          url: "/api/public/videos"
+          capture:
+            - json: "$[0].id"
+              as: "video_id"
+      - think: 0.3
+      - post:
+          url: "/api/public/videos/{{ video_id }}/vote"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: [200, 400, 401, 404]
+      - think: 0.3
+      - get:
+          url: "/api/videos"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
