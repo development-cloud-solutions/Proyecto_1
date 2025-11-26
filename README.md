@@ -448,7 +448,7 @@ done
 
 # Entrega 4 :: Escalabilidad capa worker
 
-> Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws) con el fin de desplegar los servicios de la presente entrega
+> Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation) con el fin de desplegar los servicios de la presente entrega
 
 Dentro de las políticas de Autoscaling se tiene configurado que tiene una instancia como mínimo y se escale hasta 3 instancias como máximo
 
@@ -470,7 +470,7 @@ Se escala cuando hay más de 10 mensajes visibles en SQS, y cuando hay menos de 
 
 > Como pre-requisito, se debe tener instalado Terraform en la máquina local, para ver proceso de instalación si no se tiene instalado, ver el archivo `aws-terraform\README.md`
 
->Para el despliegue de la aplicación mediante Terraform, se realizan pasos similares a la [Entrega 3](#entrega-3--despliegue-en-aws).
+>Para el despliegue de la aplicación mediante Terraform, se realizan pasos similares a la [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation).
 
 
 - Verificar si existe la llave
