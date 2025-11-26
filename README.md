@@ -234,8 +234,11 @@ Proyecto_1/
 │   │   ├── README.md
 ```
 
-
+- La carpeta `aws-deployment` contiene el código correspondiente para despliegue en AWS mediante CloudFormation.
+- La carpeta `aws-terraform` contiene el código correspondiente para despliegue en AWS mediante Terraform.
 - La carpeta `back` contiene el código correspondiente a GO, con su respectivo `README.md`
+- La carpeta `capacity-planning` contiene el código correspondiente al plan de pruebas, con su respectivo `README.md`
+- La carpeta `collections` contiene los archivos de pruebas mediante POSTMAN.
 - La carpeta `db` contiene el código SQL para la creación de objetos en la base de datos
 - La carpeta `docs/Entrega_1` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
   - `docs\Entrega_1\ISIS4426_Entrega_1_Plan_Pruebas_Carga.pdf` contiene los requerimientos/análisis para pruebas de carga.
