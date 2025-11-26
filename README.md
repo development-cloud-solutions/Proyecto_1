@@ -1,5 +1,14 @@
 # Proyecto 1: ANB Rising Stars
 
+Índice:
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Entrega 1](#entrega-1--ejecución-del-proyecto)
+- [Entrega 2](#entrega-2--despliegue-en-aws)
+- [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation)
+- [Entrega 4](#entrega-4--escalabilidad-capa-worker)
+- [Entrega 5](#entrega-5--despliegue-en-aws-mediante-terraform)
+- [Sutentación](#sustentación)
+
 ## Integrantes
 
 Nombre | Correo |
@@ -337,7 +346,7 @@ docker compose -f docker-compose.api.yml --env-file back/.env up -d
 docker compose -f docker-compose.worker.yml --env-file back/.env up -d
 ```
 
-# Entrega 3 :: Despliegue en AWS
+# Entrega 3 :: Despliegue en AWS CloudFormation
 
 > Para la entrega 3, se realizo el uso de servicios de AWS como EC2, ALB, RDS, S3.
 
