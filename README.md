@@ -1,5 +1,14 @@
 # Proyecto 1: ANB Rising Stars
 
+Índice:
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Entrega 1](#entrega-1--ejecución-del-proyecto)
+- [Entrega 2](#entrega-2--despliegue-en-aws)
+- [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation)
+- [Entrega 4](#entrega-4--escalabilidad-capa-worker)
+- [Entrega 5](#entrega-5--despliegue-en-aws-mediante-terraform)
+- [Sutentación](#sustentación)
+
 ## Integrantes
 
 Nombre | Correo |
@@ -18,18 +27,53 @@ Proyecto_1/
 │   ├── 01-vpc-networking.yaml
 │   ├── 02-s3-iam.yaml
 │   ├── 03-elasticache.yaml
-│   ├── 03-elasticache.yaml.backup
+│   ├── 03.5-sqs-queue.yaml
 │   ├── 04-rds-database.yaml
 │   ├── 05-alb-autoscaling.yaml
+│   ├── 06-workers-autoscaling.yaml
 │   ├── 06-workers.yaml
-│   ├── anb-keypair.pem
 │   ├── cleanup.sh
-│   ├── deploy copy.sh
 │   ├── deploy.sh
 │   ├── parameters.example.json
 │   ├── README.md
+├── aws-terraform/
+│   ├── cleanup.sh
+│   ├── deploy.sh
+│   ├── main.tf
+│   ├── modules/
+│   │   ├── alb-autoscaling/
+│   │   │   ├── main.tf
+│   │   │   ├── outputs.tf
+│   │   │   ├── user_data.sh.tpl
+│   │   │   ├── variables.tf
+│   │   ├── rds/
+│   │   │   ├── main.tf
+│   │   │   ├── outputs.tf
+│   │   │   ├── variables.tf
+│   │   ├── s3-iam/
+│   │   │   ├── main.tf
+│   │   │   ├── outputs.tf
+│   │   │   ├── variables.tf
+│   │   ├── sqs/
+│   │   │   ├── main.tf
+│   │   │   ├── outputs.tf
+│   │   │   ├── variables.tf
+│   │   ├── vpc/
+│   │   │   ├── main.tf
+│   │   │   ├── outputs.tf
+│   │   │   ├── variables.tf
+│   │   ├── workers/
+│   │   │   ├── main.tf
+│   │   │   ├── outputs.tf
+│   │   │   ├── user_data.sh.tpl
+│   │   │   ├── variables.tf
+│   ├── outputs.tf
+│   ├── README.md
+│   ├── terraform.tfvars.example
+│   ├── variables.tf
 ├── back/
 │   ├── .dockerignore
+│   ├── .env
 │   ├── .env.example
 │   ├── artillery-autoscaling-api.yml
 │   ├── artillery-autoscaling-worker.yml
@@ -90,6 +134,18 @@ Proyecto_1/
 │   ├── nginx/
 │   │   ├── nginx.conf
 │   ├── README.md
+│   ├── scripts/
+│   │   ├── generate-report.js
+│   │   ├── load-test-autoscaling-api.sh
+│   │   ├── load-test-autoscaling-worker.sh
+│   │   ├── load-test-data.csv
+│   │   ├── load-test-simple.sh
+│   │   ├── load-test-video.sh
+│   │   ├── load-test.sh
+│   │   ├── newman-tests.sh
+│   │   ├── processor.js
+│   │   ├── README.md
+│   │   ├── view-results.sh
 ├── capacity-planning/
 │   ├── Apache_Bench/
 │   │   ├── ab_tests.sh
@@ -143,6 +199,10 @@ Proyecto_1/
 │   ├── Entrega_3/
 │   │   ├── 001_ISIS4426_Entrega_3_Req.pdf
 │   │   ├── 002_Proyecto_Entrega_3.pdf
+│   ├── Entrega_4/
+│   │   ├── 001_ISIS4426_Entrega_4_Req.pdf
+│   │   ├── 002_Proyecto_Entrega_4.pdf
+│   ├── Entrega_5/
 │   │   ├── README.md
 │   ├── Video/
 │   │   ├── README.md
@@ -179,26 +239,41 @@ Proyecto_1/
 │   │   ├── README.md
 │   ├── Entrega_4/
 │   │   ├── README.md
+│   ├── Entrega_5/
+│   │   ├── README.md
 ```
 
-
+- La carpeta `aws-deployment` contiene el código correspondiente para despliegue en AWS mediante CloudFormation.
+- La carpeta `aws-terraform` contiene el código correspondiente para despliegue en AWS mediante Terraform.
 - La carpeta `back` contiene el código correspondiente a GO, con su respectivo `README.md`
+- La carpeta `capacity-planning` contiene el código correspondiente al plan de pruebas, con su respectivo `README.md`
+- La carpeta `collections` contiene los archivos de pruebas mediante POSTMAN.
 - La carpeta `db` contiene el código SQL para la creación de objetos en la base de datos
 - La carpeta `docs/Entrega_1` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+  - `docs\Entrega_1\ISIS4426_Entrega_1_Plan_Pruebas_Carga.pdf` contiene los requerimientos/análisis para pruebas de carga.
+  - `docs\Entrega_1\ISIS4426_Entrega_1_Req.pdf`                documento de requerimientos para la entrega 1.
 - La carpeta `docs/Entrega_2` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
-- La carpeta `docs/Entrega_3` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
   - `docs\Entrega_2\001_Proyecto-Entrega_2.pdf` contiene la información del despliegue del proyecto en AWS
   - `docs\Entrega_2\002_Análisis_Capacidad.pdf` contiene la información correspondiente a las pruebas de carga realizadas.
   - `docs\Entrega_2\ISIS4426_Entrega_2_Req.pdf` documento de requerimientos para la entrega 2.
-  - `docs\Entrega_2\ISIS4426_Entrega_3_Req.pdf` documento de requerimientos para la entrega 3.
+- La carpeta `docs/Entrega_3` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+  - `docs\Entrega_3\001_ISIS4426_Entrega_3_Req.pdf` documento de requerimientos para la entrega 3.
+  - `docs\Entrega_3\002_Proyecto_Entrega_3.pdf`     documento de con la descripión del despliegue realizado
+- La carpeta `docs/Entrega_4` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+  - `docs\Entrega_4\001_ISIS4426_Entrega_4_Req.pdf` documento de requerimientos para la entrega 4.
+  - `docs\Entrega_4\002_Proyecto_Entrega_4.pdf`     documento de con la descripión del despliegue realizado.
+- La carpeta `docs/Entrega_5` contiene documentos referentes a la descripción de requerimientos del proyectos así como documentos de referencia.
+  - `docs\Entrega_5\README.md` requerimientos para la entrega 5.
 - La carpeta `docs/Video` contiene un vídeo para pruebas tanto de carga como de uso en la API.
 - La carpeta `front` contiene el código correspondiente a la interfaz gráfica desarrollada en React, con su respectivo `README.md`
 - La carpeta `sustentacion` contiene el respectivo `README.md` en cada carpeta de entrega con el respectivo enlace del video de demostración.
   - `sustentacion\Entrega_1\README.md` contiene el link de sustenación al video de la entrega 1.
   - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 2.
-  - `sustentacion\Entrega_2\README.md` contiene el link de sustenación al video de la entrega 3.
+  - `sustentacion\Entrega_3\README.md` contiene el link de sustenación al video de la entrega 3.
+  - `sustentacion\Entrega_4\README.md` contiene el link de sustenación al video de la entrega 4.
+  - `sustentacion\Entrega_5\README.md` contiene el link de sustenación al video de la entrega 5.
 
-## Ejecución del proyecto
+## Entrega 1 :: Ejecución del proyecto
 
 En una ventana de comandos/terminal:
 
@@ -271,7 +346,7 @@ docker compose -f docker-compose.api.yml --env-file back/.env up -d
 docker compose -f docker-compose.worker.yml --env-file back/.env up -d
 ```
 
-# Entrega 3 :: Despliegue en AWS
+# Entrega 3 :: Despliegue en AWS CloudFormation
 
 > Para la entrega 3, se realizo el uso de servicios de AWS como EC2, ALB, RDS, S3.
 
@@ -373,7 +448,7 @@ done
 
 # Entrega 4 :: Escalabilidad capa worker
 
-> Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws) con el fin de desplegar los servicios de la presente entrega
+> Ejecutar los mismos pasos de la [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation) con el fin de desplegar los servicios de la presente entrega
 
 Dentro de las políticas de Autoscaling se tiene configurado que tiene una instancia como mínimo y se escale hasta 3 instancias como máximo
 
@@ -391,6 +466,63 @@ Se escala cuando hay más de 10 mensajes visibles en SQS, y cuando hay menos de 
   - Umbral objetivo: 10 mensajes por worker
   - Warmup: 180 segundos (3 minutos)
 
+# Entrega 5 :: Despliegue en AWS mediante Terraform
+
+> Como pre-requisito, se debe tener instalado Terraform en la máquina local, para ver proceso de instalación si no se tiene instalado, ver el archivo `aws-terraform\README.md`
+
+>Para el despliegue de la aplicación mediante Terraform, se realizan pasos similares a la [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation).
+
+
+- Verificar si existe la llave
+```bash
+# Verificar que existe el key pair
+aws ec2 describe-key-pairs --key-names anb-keypair --region us-east-1
+```
+
+- Si no existe, crearla:
+```bash
+# Crear el key pair
+aws ec2 create-key-pair \
+  --key-name anb-keypair \
+  --query 'KeyMaterial' \
+  --output text > anb-keypair.pem
+
+# Establecer permisos (Linux/Mac)
+chmod 400 anb-keypair.pem
+```
+
+- Generar variables de password:
+```bash
+# Generar JWT secret
+JWT_SECRET=$(openssl rand -hex 32)
+
+# Generar DB password (Modificar para producción)
+DB_PASSWORD="MySecurePassword123!"
+```
+
+- Ejecutar desde la raíz del proyecto `Proyecto_1`:
+```bash
+# Ejecutar despliegue
+./aws-terraform/deploy.sh anb-production anb-keypair "$DB_PASSWORD" "$JWT_SECRET"
+```
+
+Una vez la infraestructura se ha desplegado correctamente, ingresar a la máquina EC2 del API y ejecutar (cuando se solicite el password de la base de datos es la configurada en el paso "Generar variables de password" en la variable `DB_PASSWORD`)
+```bash
+# EC2 - Ingresar a la carpeta de la aplicacíón
+cd /opt/anb-app/
+
+# Ejecutar la instalación de scripts en RDS, reemplazar URL_RDS por la conexión a BD
+for file in db/*.up.sql; do
+  psql -h anb-production-postgres.xxxx.us-east-1.rds.amazonaws.com -U postgres -d proyecto_1 -f "$file"
+done
+```
+
+> Para destruir/eliminar los recursos creados, ejecutar y confirmar las acciones respectivas
+```bash
+# Destruir todo
+./aws-terraform/cleanup.sh anb-production
+```
+
 
 # Sustentación
 
@@ -399,3 +531,4 @@ Vídeos de sustentación
 - Entrega 2 => `sustentacion\Entrega_2\README.md`
 - Entrega 3 => `sustentacion\Entrega_3\README.md`
 - Entrega 4 => `sustentacion\Entrega_4\README.md`
+- Entrega 5 => `sustentacion\Entrega_5\README.md`

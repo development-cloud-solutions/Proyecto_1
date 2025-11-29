@@ -1,0 +1,55 @@
+# =============================================================================
+# ANB Rising Stars - Terraform Variables Example
+# Copy this file to terraform.tfvars and modify the values
+# =============================================================================
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Environment Configuration
+environment_name = "anb-production"
+key_pair_name    = "anb-keypair"  # CHANGE: Must exist in your AWS account
+
+# Database Configuration
+db_instance_class       = "db.t3.micro"
+db_name                 = "proyecto_1"
+db_username             = "postgres"
+db_password             = "CHANGE_ME_MySecurePassword123!"  # CHANGE: Use a strong password
+allocated_storage       = 20
+backup_retention_period = 0   # AWS Academy limitation
+multi_az                = false
+
+# Application Configuration
+jwt_secret                = "CHANGE_ME_run_openssl_rand_hex_32_to_generate"  # CHANGE: Run: openssl rand -hex 32
+deployment_package_s3_key = "deployments/latest/app.tar.gz"
+
+# API Auto Scaling Configuration
+api_instance_type    = "t3.small"
+api_min_size         = 1
+api_max_size         = 3
+api_desired_capacity = 1
+cpu_target_value     = 70
+
+# Worker Auto Scaling Configuration
+worker_instance_type    = "t3.small"
+worker_min_size         = 1
+worker_max_size         = 3
+worker_desired_capacity = 1
+worker_concurrency      = 4
+target_queue_depth      = 10
+
+# SQS Queue Configuration
+message_retention_period = 345600  # 4 days in seconds
+visibility_timeout       = 900     # 15 minutes in seconds
+max_receive_count        = 3
+
+# Network Configuration
+vpc_cidr              = "10.0.0.0/16"
+public_subnet_1_cidr  = "10.0.1.0/24"
+public_subnet_2_cidr  = "10.0.2.0/24"
+private_subnet_1_cidr = "10.0.11.0/24"
+private_subnet_2_cidr = "10.0.12.0/24"
+
+# S3 Configuration
+video_storage_bucket_name = ""     # Leave empty for auto-generated name
+create_s3_bucket          = false  # Set to true if bucket doesn't exist
