@@ -7,7 +7,7 @@
 - [Entrega 3](#entrega-3--despliegue-en-aws-cloudformation)
 - [Entrega 4](#entrega-4--escalabilidad-capa-worker)
 - [Entrega 5](#entrega-5--despliegue-en-aws-mediante-terraform)
-- [Sutentación](#sustentación)
+- [Sustentación](#sustentación)
 
 ## Integrantes
 
